@@ -1,0 +1,40 @@
+# Entorno virtual
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Datos (no subir datos grandes)
+data/raw/*.xlsx
+data/raw/*.csv
+data/processed/*.csv
+*.h5
+*.pkl
+
+# Outputs
+outputs/figures/*.png
+outputs/figures/*.jpg
+outputs/models/*.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+
+# Configuración local
+config.yaml

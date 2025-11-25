@@ -1,0 +1,89 @@
+
+contexto
+seguimos contruyendo una aplicacion para la administracion de un instituto de educacion
+
+tarea
+revisar la siguiente estrutura de datos
+
+* estudiantes
+    - estudiante_id
+    - nombres
+    - apellidos
+    - direccion
+    - correo
+    - celular
+    - campus_id
+    - sexo
+    - edad
+    - fecha de nacimiento
+* campus
+    - campus_id
+    - nombre
+    - direccion
+    - celular
+* gestion
+    - gestion_id
+    - nro
+    - año
+* estudiante_gestion
+    - estudiante_gestion_id
+    - estudiante_id
+    - gestion_id
+* parentesco
+    - parentesco_id
+    - nombre
+* responsables
+    - responsable_Id
+    - estudiante_id
+    - parentesco_id
+    - nombres
+    - apellidos
+    - direccion
+    - correo
+    - celular
+
+crear un plan para generar un script sql haciendo correscciones o posibles mejoras
+esta so debe agregar a la base de datos: schema.sql
+
+
+* nivel
+    - nivel_id
+    - nombre
+    - descripcion
+* grado
+    - grado_id
+    - nombre
+    - nivel_id
+* curso
+    - curso_id
+    - nombre
+    - grado_id
+* asignatura
+    - asignatura_id
+    - nombre
+    - curso_id
+* profesor
+    - profesor_id
+    - nombre
+    - apellido
+    - correo
+    - celular
+* profesor_asignatura
+    - profesor_asignatura_id
+    - profesor_id
+    - asignatura_id
+* estudiante_curso
+    - estudiante_curso_id
+    - estudiante_id
+    - curso_id
+* calificacion
+    - calificacion_id
+    - estudiante_curso_id
+    - asignatura_id
+    - calificacion
+    - fecha
+* nota
+    - nota_id
+    - calificacion_id
+    - nota
+    - fecha
