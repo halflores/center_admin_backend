@@ -10,9 +10,38 @@ from app.models.models import Usuario
 
 router = APIRouter()
 
+from sqlalchemy.exc import IntegrityError
+
+@router.get("/check-email")
+def check_email_exists(email: str, db: Session = Depends(get_db), current_user: Usuario = Depends(deps.get_current_user)):
+    estudiante = estudiante_service.get_estudiante_by_email(db, email=email)
+    if estudiante:
+        return {"exists": True, "detail": "El correo electrónico ya está registrado."}
+    return {"exists": False, "detail": "El correo electrónico está disponible."}
+
 @router.post("/", response_model=EstudianteResponse)
 def create_estudiante(estudiante: EstudianteCreate, db: Session = Depends(get_db), current_user: Usuario = Depends(deps.get_current_user)):
-    return estudiante_service.create_estudiante(db=db, estudiante=estudiante, usuario_id=current_user.id)
+    try:
+        return estudiante_service.create_estudiante(db=db, estudiante=estudiante, usuario_id=current_user.id)
+    except IntegrityError as e:
+        db.rollback()
+        error_str = str(e).lower()
+        if hasattr(e, 'orig') and e.orig:
+            error_str += " " + str(e.orig).lower()
+            
+        if "unique" in error_str or "duplicate" in error_str:
+            if "correo" in error_str or "email" in error_str:
+                raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
+            raise HTTPException(status_code=400, detail="Ya existe un registro con estos datos (posible duplicado).")
+        
+        if "foreign key" in error_str:
+            raise HTTPException(status_code=400, detail="Referencia inválida (Campus o Usuario no existe).")
+            
+        raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e.orig) if hasattr(e, 'orig') else str(e)}")
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR CREATING STUDENT: {type(e)} - {e}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @router.get("/", response_model=List[EstudianteResponse])
 def read_estudiantes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: Usuario = Depends(deps.get_current_user)):

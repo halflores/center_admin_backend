@@ -8,6 +8,9 @@ def get_estudiante(db: Session, estudiante_id: int):
 def get_estudiantes(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Estudiante).offset(skip).limit(limit).all()
 
+def get_estudiante_by_email(db: Session, email: str):
+    return db.query(Estudiante).filter(Estudiante.correo == email).first()
+
 def create_estudiante(db: Session, estudiante: EstudianteCreate, usuario_id: int):
     db_estudiante = Estudiante(**estudiante.model_dump(), usuario_id=usuario_id)
     db.add(db_estudiante)
