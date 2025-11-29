@@ -87,3 +87,233 @@ esta so debe agregar a la base de datos: schema.sql
     - calificacion_id
     - nota
     - fecha
+
+seguimos con el contexto de elaborar una aplicacion para la administracion de un instituto de educacion
+
+3. Control de Inventario
+•	Materiales en venta:
+    o	18 textos WorkBook (precios variables).
+    o	6 textos KidsCircle EBI (mismo precio).
+    o	1 texto Vocabulary.
+    o	6 variedades de Flash Cards.
+
+•	Lista de precios :
+    o	Permitir hasta 5 listas de precios.
+
+•	Grupos de descuentos :
+    o	Permitir lista de descuentos, para estudiantes, estos se registran por material y por estudiante
+
+•	Funcionalidades:
+    o	Registro de ingresos de venta.
+    o	Registro de devoluciones al proveedor.    
+    o	Registro de devoluciones al estudiante.        
+    o	Carrito de compras para venta.
+
+realizar un plan para generar un script sql de tablas para control de inventario haciendo correscciones o posibles mejoras
+esta so debe agregar a la base de datos: schema.sql
+
+--------------------------------------------------------------------------------------------------------------------------
+
+siguiendo el contexto de la aplicacion, crear api para categorias_producto 
+para las operaciones CRUD
+
+-- 13. Categorias de Producto
+-- Categories for inventory items (e.g., Textbooks, Flash Cards)
+CREATE TABLE categorias_producto (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT
+);
+
+siguiendo el contexto de la aplicacion, crear api para productos 
+para las operaciones CRUD
+
+-- 14. Productos
+-- Inventory items (WorkBooks, KidsCircle, Vocabulary, Flash Cards)
+CREATE TABLE productos (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    categoria_id INTEGER REFERENCES categorias_producto(id),
+    codigo VARCHAR(50) UNIQUE, -- SKU or internal code
+    stock_actual INTEGER DEFAULT 0,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+siguiendo el contexto de la aplicacion, crear api para listas_precios 
+para las operaciones CRUD
+
+-- 15. Listas de Precios
+-- Supports up to 5 price lists as requested
+CREATE TABLE listas_precios (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE, -- e.g., 'Publico General', 'Estudiantes', 'Becados'
+    descripcion TEXT
+);
+
+siguiendo el contexto de la aplicacion, crear api para precios_producto 
+para las operaciones CRUD
+
+-- 16. Precios de Producto
+-- Links products to price lists
+CREATE TABLE precios_producto (
+    id SERIAL PRIMARY KEY,
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    lista_precios_id INTEGER NOT NULL REFERENCES listas_precios(id) ON DELETE CASCADE,
+    precio DECIMAL(10, 2) NOT NULL CHECK (precio >= 0),
+    UNIQUE(producto_id, lista_precios_id)
+);
+
+siguiendo el contexto de la aplicacion, crear api para descuentos_estudiante 
+para las operaciones CRUD
+
+-- 17. Descuentos Estudiante
+-- Specific discounts per student and product
+CREATE TABLE descuentos_estudiante (
+    id SERIAL PRIMARY KEY,
+    estudiante_id INTEGER NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    porcentaje_descuento DECIMAL(5, 2) CHECK (porcentaje_descuento >= 0 AND porcentaje_descuento <= 100),
+    monto_descuento DECIMAL(10, 2) CHECK (monto_descuento >= 0), -- Option for fixed amount discount
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(estudiante_id, producto_id)
+);
+
+siguiendo el contexto de la aplicacion, crear api para ingresos, ventas, devoluciones y movimientos de inventario
+para las operaciones CRUD
+Considerar que las tablas cabecera y detalle deben cumplir con el principio de atomicidad, es decir, se guardan juntas
+y si ocurre un error en la transaccion, se deshacen todas las operaciones
+
+-- 18. Ventas
+-- Sales transactions (Income)
+CREATE TABLE ventas (
+    id SERIAL PRIMARY KEY,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    usuario_id INTEGER REFERENCES usuarios(id), -- Seller
+    estudiante_id INTEGER REFERENCES estudiantes(id), -- Buyer (optional, could be general public)
+    cliente_nombre VARCHAR(150), -- If not a registered student
+    total DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    estado VARCHAR(20) DEFAULT 'COMPLETADA', -- COMPLETADA, ANULADA
+    metodo_pago VARCHAR(50) -- Efectivo, QR, Transferencia
+);
+
+-- 19. Detalle de Venta
+-- Items within a sale
+CREATE TABLE detalle_venta (
+    id SERIAL PRIMARY KEY,
+    venta_id INTEGER NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+    producto_id INTEGER NOT NULL REFERENCES productos(id),
+    cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+    precio_unitario DECIMAL(10, 2) NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL
+);
+
+-- 20. Devoluciones
+-- Handles returns to suppliers and from students
+CREATE TABLE devoluciones (
+    id SERIAL PRIMARY KEY,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('PROVEEDOR', 'ESTUDIANTE')),
+    referencia_id INTEGER, -- Could be venta_id if type is ESTUDIANTE
+    motivo TEXT,
+    usuario_id INTEGER REFERENCES usuarios(id), -- User processing the return
+    estado VARCHAR(20) DEFAULT 'PENDIENTE'
+);
+
+-- 21. Detalle Devolucion
+-- Items involved in the return
+CREATE TABLE detalle_devolucion (
+    id SERIAL PRIMARY KEY,
+    devolucion_id INTEGER NOT NULL REFERENCES devoluciones(id) ON DELETE CASCADE,
+    producto_id INTEGER NOT NULL REFERENCES productos(id),
+    cantidad INTEGER NOT NULL CHECK (cantidad > 0)
+);
+
+-- 22. Movimientos Inventario
+-- Log of all stock changes for audit and tracking
+CREATE TABLE movimientos_inventario (
+    id SERIAL PRIMARY KEY,
+    producto_id INTEGER NOT NULL REFERENCES productos(id),
+    tipo_movimiento VARCHAR(50) NOT NULL, -- VENTA, INGRESO_COMPRA, DEVOLUCION_PROVEEDOR, DEVOLUCION_ESTUDIANTE, AJUSTE
+    cantidad INTEGER NOT NULL, -- Positive for add, Negative for remove
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    referencia_tabla VARCHAR(50), -- 'ventas', 'devoluciones', 'ingresos'
+    referencia_id INTEGER, -- ID in the referenced table
+    usuario_id INTEGER REFERENCES usuarios(id)
+);
+
+-- 23. Carrito de Compras
+-- Temporary state for building a sale
+CREATE TABLE carrito_compras (
+    id SERIAL PRIMARY KEY,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE, -- The seller using the system
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    cantidad INTEGER NOT NULL DEFAULT 1 CHECK (cantidad > 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(usuario_id, producto_id)
+);
+
+corregir, la funcion de categorias_producto, no carga la pagina
+revisar la autorizacion de permisos
+en la base de datos el rol_id es 6, y este tiene permiso para crear, eliminar, leer y actualizar categorias de productos
+
+
+id|nombre     |nombre             |nombre|
+--+-----------+-------------------+------+
+ 6|Super Admin|acciones           |create|
+ 6|Super Admin|acciones           |delete|
+ 6|Super Admin|acciones           |read  |
+ 6|Super Admin|acciones           |update|
+ 6|Super Admin|campus             |create|
+ 6|Super Admin|campus             |delete|
+ 6|Super Admin|campus             |read  |
+ 6|Super Admin|campus             |update|
+ 6|Super Admin|categorias_producto|create|
+ 6|Super Admin|categorias_producto|delete|
+ 6|Super Admin|categorias_producto|read  |
+ 6|Super Admin|categorias_producto|update|
+ 6|Super Admin|estudiantes        |create|
+ 6|Super Admin|estudiantes        |delete|
+ 6|Super Admin|estudiantes        |read  |
+ 6|Super Admin|estudiantes        |update|
+ 6|Super Admin|funciones          |create|
+ 6|Super Admin|funciones          |delete|
+ 6|Super Admin|funciones          |read  |
+ 6|Super Admin|funciones          |update|
+ 6|Super Admin|gestion            |create|
+ 6|Super Admin|gestion            |delete|
+ 6|Super Admin|gestion            |read  |
+ 6|Super Admin|gestion            |update|
+ 6|Super Admin|parentesco         |create|
+ 6|Super Admin|parentesco         |delete|
+ 6|Super Admin|parentesco         |read  |
+ 6|Super Admin|parentesco         |update|
+ 6|Super Admin|permisos           |create|
+ 6|Super Admin|permisos           |delete|
+ 6|Super Admin|permisos           |read  |
+ 6|Super Admin|permisos           |update|
+ 6|Super Admin|productos          |create|
+ 6|Super Admin|productos          |delete|
+ 6|Super Admin|productos          |read  |
+ 6|Super Admin|productos          |update|
+ 6|Super Admin|responsables       |create|
+ 6|Super Admin|responsables       |delete|
+ 6|Super Admin|responsables       |read  |
+ 6|Super Admin|responsables       |update|
+ 6|Super Admin|roles              |create|
+ 6|Super Admin|roles              |delete|
+ 6|Super Admin|roles              |read  |
+ 6|Super Admin|roles              |update|
+ 6|Super Admin|rol_permisos       |create|
+ 6|Super Admin|rol_permisos       |delete|
+ 6|Super Admin|rol_permisos       |read  |
+ 6|Super Admin|rol_permisos       |update|
+ 6|Super Admin|users              |create|
+ 6|Super Admin|users              |delete|
+ 6|Super Admin|users              |read  |
+ 6|Super Admin|users              |update|
+
+
+
+

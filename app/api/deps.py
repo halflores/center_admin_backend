@@ -34,3 +34,32 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+def check_permission(required_permission: str):
+    def permission_checker(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+        # Check if user is superadmin (optional, depending on your logic)
+        # if current_user.is_superuser:
+        #     return True
+        
+        # Check if user has the specific permission via their role
+        has_perm = False
+        if current_user.rol:
+            for rol_permiso in current_user.rol.permisos:
+                # Assuming rol_permiso has a relationship to Permiso which has relationships to Funcion and Accion
+                # We need to construct the permission string "funcion.accion"
+                # Let's check the models structure again.
+                # RolPermiso -> Permiso -> Funcion, Accion
+                
+                permiso = rol_permiso.permiso
+                permission_str = f"{permiso.funcion.nombre}.{permiso.accion.nombre}"
+                if permission_str == required_permission:
+                    has_perm = True
+                    break
+        
+        if not has_perm:
+             raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Not enough permissions. Required: {required_permission}",
+            )
+        return current_user
+    return permission_checker

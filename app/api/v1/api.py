@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import roles, users, login, funciones, acciones, permisos, rol_permisos, campus, estudiantes, gestion, parentesco, responsables
+from app.api.v1.endpoints import roles, users, login, funciones, acciones, permisos, rol_permisos, campus, estudiantes, gestion, parentesco, responsables, categorias_producto, productos, listas_precios, precios_producto, descuentos_estudiante, ventas, devoluciones, movimientos, carrito, ingresos, proveedores
 
 api_router = APIRouter()
 api_router.include_router(login.router, tags=["login"])
@@ -14,3 +14,14 @@ api_router.include_router(estudiantes.router, prefix="/estudiantes", tags=["estu
 api_router.include_router(gestion.router, prefix="/gestion", tags=["gestion"])
 api_router.include_router(parentesco.router, prefix="/parentesco", tags=["parentesco"])
 api_router.include_router(responsables.router, prefix="/responsables", tags=["responsables"])
+api_router.include_router(categorias_producto.router, prefix="/categorias_producto", tags=["categorias_producto"])
+api_router.include_router(productos.router, prefix="/productos", tags=["productos"])
+api_router.include_router(listas_precios.router, prefix="/listas_precios", tags=["listas_precios"])
+api_router.include_router(precios_producto.router, prefix="/precios_producto", tags=["precios_producto"])
+api_router.include_router(descuentos_estudiante.router, prefix="/descuentos_estudiante", tags=["descuentos_estudiante"])
+api_router.include_router(ventas.router, prefix="/ventas", tags=["ventas"])
+api_router.include_router(devoluciones.router, prefix="/devoluciones", tags=["devoluciones"])
+api_router.include_router(movimientos.router, prefix="/movimientos", tags=["movimientos"])
+api_router.include_router(carrito.router, prefix="/carrito", tags=["carrito"])
+api_router.include_router(ingresos.router, prefix="/ingresos", tags=["ingresos"])
+api_router.include_router(proveedores.router, prefix="/proveedores", tags=["proveedores"])
