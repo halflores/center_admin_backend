@@ -16,6 +16,12 @@ class MovimientoInventarioResponse(MovimientoInventarioBase):
     id: int
     fecha: datetime
     usuario_id: Optional[int]
+    usuario_nombre: Optional[str] = None
+    producto_nombre: Optional[str] = None
+    cliente: Optional[str] = None
+    proveedor: Optional[str] = None
+    anulado: bool = False
+    total: Optional[float] = None
 
     class Config:
         from_attributes = True

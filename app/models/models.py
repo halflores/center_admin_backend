@@ -241,6 +241,7 @@ class DetalleVenta(Base):
     producto_id = Column(Integer, ForeignKey("productos.id"), nullable=False)
     cantidad = Column(Integer, nullable=False)
     precio_unitario = Column(Numeric(10, 2), nullable=False)
+    descuento = Column(Numeric(10, 2), default=0.00, nullable=False)
     subtotal = Column(Numeric(10, 2), nullable=False)
 
     venta = relationship("Venta", back_populates="detalles")
@@ -282,6 +283,7 @@ class MovimientoInventario(Base):
     referencia_tabla = Column(String(50), nullable=True)
     referencia_id = Column(Integer, nullable=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    anulado = Column(Boolean, default=False)
 
     producto = relationship("Producto")
     usuario = relationship("Usuario")
@@ -293,6 +295,7 @@ class CarritoCompras(Base):
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
     producto_id = Column(Integer, ForeignKey("productos.id", ondelete="CASCADE"), nullable=False)
     cantidad = Column(Integer, nullable=False, default=1)
+    descuento = Column(Numeric(10, 2), default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint('usuario_id', 'producto_id', name='unique_usuario_producto_carrito'),)

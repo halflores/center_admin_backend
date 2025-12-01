@@ -14,11 +14,15 @@ def add_to_cart(db: Session, item: CarritoItemCreate, usuario_id: int):
 
     if db_item:
         db_item.cantidad += item.cantidad
+        # Update discount if provided
+        if item.descuento is not None:
+            db_item.descuento = item.descuento
     else:
         db_item = CarritoCompras(
             usuario_id=usuario_id,
             producto_id=item.producto_id,
-            cantidad=item.cantidad
+            cantidad=item.cantidad,
+            descuento=item.descuento if item.descuento is not None else 0.0
         )
         db.add(db_item)
     
@@ -29,7 +33,10 @@ def add_to_cart(db: Session, item: CarritoItemCreate, usuario_id: int):
 def update_cart_item(db: Session, item_id: int, item: CarritoItemUpdate):
     db_item = db.query(CarritoCompras).filter(CarritoCompras.id == item_id).first()
     if db_item:
-        db_item.cantidad = item.cantidad
+        if item.cantidad is not None:
+            db_item.cantidad = item.cantidad
+        if item.descuento is not None:
+            db_item.descuento = item.descuento
         db.commit()
         db.refresh(db_item)
     return db_item

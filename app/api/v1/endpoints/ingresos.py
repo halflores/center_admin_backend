@@ -88,3 +88,14 @@ def download_ingreso_pdf(
         }
     )
 
+@router.post("/{ingreso_id}/cancel", response_model=IngresoResponse)
+def cancel_ingreso(
+    ingreso_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(deps.check_permission("ingresos.delete")) # Using delete permission for cancellation
+):
+    try:
+        return ingreso_service.cancel_ingreso(db=db, ingreso_id=ingreso_id, current_user=current_user)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

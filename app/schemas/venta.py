@@ -7,6 +7,7 @@ class DetalleVentaBase(BaseModel):
     producto_id: int
     cantidad: int
     precio_unitario: Decimal
+    descuento: Optional[Decimal] = Decimal('0.00')
 
     @validator('cantidad')
     def validate_cantidad(cls, v):
@@ -17,9 +18,12 @@ class DetalleVentaBase(BaseModel):
 class DetalleVentaCreate(DetalleVentaBase):
     pass
 
+from app.schemas.producto import ProductoResponse
+
 class DetalleVentaResponse(DetalleVentaBase):
     id: int
     subtotal: Decimal
+    producto: Optional[ProductoResponse] = None
 
     class Config:
         from_attributes = True
@@ -32,10 +36,15 @@ class VentaBase(BaseModel):
 class VentaCreate(VentaBase):
     detalles: List[DetalleVentaCreate]
 
+from app.schemas.user import UserResponse
+from app.schemas.estudiante import EstudianteResponse
+
 class VentaResponse(VentaBase):
     id: int
     fecha: datetime
     usuario_id: Optional[int]
+    usuario: Optional[UserResponse] = None
+    estudiante: Optional[EstudianteResponse] = None
     total: Decimal
     estado: str
     detalles: List[DetalleVentaResponse]
