@@ -18,7 +18,7 @@ def create_precio_producto(precio_producto: PrecioProductoCreate, db: Session = 
         lista_precios_id=precio_producto.lista_precios_id
     )
     if db_precio:
-        raise HTTPException(status_code=400, detail="Price for this product in this list already exists")
+        raise HTTPException(status_code=400, detail="El precio para este producto en esta lista de precios ya existe")
     return precio_producto_service.create_precio_producto(db=db, precio_producto=precio_producto)
 
 @router.get("/", response_model=List[PrecioProductoResponse])

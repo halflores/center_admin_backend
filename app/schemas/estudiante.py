@@ -20,12 +20,15 @@ class EstudianteUpdate(EstudianteBase):
     apellidos: Optional[str] = None
 
 from app.schemas.campus import CampusResponse
+from app.schemas.responsable import ResponsableResponse
+from typing import List
 
 class EstudianteResponse(EstudianteBase):
     id: int
     usuario_id: Optional[int] = None
     created_at: datetime
     campus: Optional[CampusResponse] = None
+    responsables: List[ResponsableResponse] = []
 
     class Config:
         from_attributes = True

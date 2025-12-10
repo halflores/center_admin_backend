@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from app.models.models import Venta, DetalleVenta, Producto, MovimientoInventario, Estudiante
+from app.models.models import Venta, DetalleVenta, Producto, MovimientoInventario, Estudiante, InscripcionPaquete, Gestion
 from app.schemas.venta import VentaCreate
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -25,11 +25,15 @@ def create_venta(db: Session, venta: VentaCreate, usuario_id: int):
         total = 0
         for detalle in venta.detalles:
             # Check stock
-            producto = db.query(Producto).filter(Producto.id == detalle.producto_id).first()
+            producto = db.query(Producto).options(joinedload(Producto.tipo_producto)).filter(Producto.id == detalle.producto_id).first()
             if not producto:
                 raise Exception(f"Product {detalle.producto_id} not found")
-            if producto.stock_actual < detalle.cantidad:
-                raise Exception(f"Insufficient stock for product {producto.nombre}")
+
+            es_servicio = producto.tipo_producto and producto.tipo_producto.nombre == 'SERVICIO'
+
+            if not es_servicio:
+                if producto.stock_actual < detalle.cantidad:
+                    raise Exception(f"Insufficient stock for product {producto.nombre}")
 
             # Calculate subtotal with discount
             descuento = detalle.descuento if hasattr(detalle, 'descuento') and detalle.descuento else 0
@@ -48,24 +52,47 @@ def create_venta(db: Session, venta: VentaCreate, usuario_id: int):
             )
             db.add(db_detalle)
 
-            # Update Stock
-            producto.stock_actual -= detalle.cantidad
-            db.add(producto)
+            # Update Stock only if not service
+            if not es_servicio:
+                producto.stock_actual -= detalle.cantidad
+                db.add(producto)
 
-            # Create MovimientoInventario
-            movimiento = MovimientoInventario(
-                producto_id=detalle.producto_id,
-                tipo_movimiento="VENTA",
-                cantidad=-detalle.cantidad,
-                fecha=now_bolivia,
-                referencia_tabla="ventas",
-                referencia_id=db_venta.id,
-                usuario_id=usuario_id
-            )
-            db.add(movimiento)
+                # Create MovimientoInventario
+                movimiento = MovimientoInventario(
+                    producto_id=detalle.producto_id,
+                    tipo_movimiento="VENTA",
+                    cantidad=-detalle.cantidad,
+                    fecha=now_bolivia,
+                    referencia_tabla="ventas",
+                    referencia_id=db_venta.id,
+                    usuario_id=usuario_id
+                )
+                db.add(movimiento)
 
         db_venta.total = total
         db.add(db_venta)
+
+        # Create InscripcionPaquete if paquete_id is present
+        if venta.paquete_id and venta.estudiante_id:
+            # Get active gestion (term) based on current year and max nro
+            # Since 'activo' column doesn't exist, we assume the latest term of the current year is active
+            gestion_activa = db.query(Gestion).filter(Gestion.anio == now_bolivia.year).order_by(Gestion.nro.desc()).first()
+            if not gestion_activa:
+                # Fallback: try to find any gestion
+                gestion_activa = db.query(Gestion).order_by(Gestion.anio.desc(), Gestion.nro.desc()).first()
+            
+            gestion_id = gestion_activa.id if gestion_activa else None
+
+            inscripcion = InscripcionPaquete(
+                estudiante_id=venta.estudiante_id,
+                paquete_id=venta.paquete_id,
+                venta_id=db_venta.id,
+                gestion_id=gestion_id,
+                estado_academico='INSCRITO',
+                fecha_inscripcion=now_bolivia
+            )
+            db.add(inscripcion)
+
         db.commit()
         db.refresh(db_venta)
         return db_venta
@@ -85,22 +112,25 @@ def cancel_venta(db: Session, venta_id: int, usuario_id: int):
 
         # 2. Reverse Stock
         for detalle in venta.detalles:
-            producto = db.query(Producto).filter(Producto.id == detalle.producto_id).first()
+            producto = db.query(Producto).options(joinedload(Producto.tipo_producto)).filter(Producto.id == detalle.producto_id).first()
             if producto:
-                producto.stock_actual += detalle.cantidad # Add back the sold quantity
-                db.add(producto)
+                es_servicio = producto.tipo_producto and producto.tipo_producto.nombre == 'SERVICIO'
+                
+                if not es_servicio:
+                    producto.stock_actual += detalle.cantidad # Add back the sold quantity
+                    db.add(producto)
 
-                # 3. Log Movement (Reversal)
-                movimiento = MovimientoInventario(
-                    producto_id=detalle.producto_id,
-                    tipo_movimiento="ANULACION_VENTA",
-                    cantidad=detalle.cantidad, # Positive because we are adding back to stock
-                    fecha=datetime.utcnow(),
-                    referencia_tabla="ventas",
-                    referencia_id=venta.id,
-                    usuario_id=usuario_id
-                )
-                db.add(movimiento)
+                    # 3. Log Movement (Reversal)
+                    movimiento = MovimientoInventario(
+                        producto_id=detalle.producto_id,
+                        tipo_movimiento="ANULACION_VENTA",
+                        cantidad=detalle.cantidad, # Positive because we are adding back to stock
+                        fecha=datetime.utcnow(),
+                        referencia_tabla="ventas",
+                        referencia_id=venta.id,
+                        usuario_id=usuario_id
+                    )
+                    db.add(movimiento)
 
         # 4. Update State
         venta.estado = 'ANULADA'

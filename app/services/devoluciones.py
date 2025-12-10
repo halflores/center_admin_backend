@@ -2,6 +2,18 @@ from sqlalchemy.orm import Session
 from app.models.models import Devolucion, DetalleDevolucion, Producto, MovimientoInventario
 from app.schemas.devolucion import DevolucionCreate
 from datetime import datetime
+from typing import Optional
+
+def get_devoluciones(db: Session, skip: int = 0, limit: int = 100, tipo: Optional[str] = None):
+    """Get list of devoluciones with optional tipo filter"""
+    query = db.query(Devolucion)
+    if tipo:
+        query = query.filter(Devolucion.tipo == tipo)
+    return query.order_by(Devolucion.fecha.desc()).offset(skip).limit(limit).all()
+
+def get_devolucion_by_id(db: Session, devolucion_id: int):
+    """Get a specific devolucion by ID"""
+    return db.query(Devolucion).filter(Devolucion.id == devolucion_id).first()
 
 def create_devolucion(db: Session, devolucion: DevolucionCreate, usuario_id: int):
     try:
@@ -28,8 +40,11 @@ def create_devolucion(db: Session, devolucion: DevolucionCreate, usuario_id: int
             )
             db.add(db_detalle)
 
-            # Update Stock (Add back to inventory)
-            producto.stock_actual += detalle.cantidad
+            # Update Stock (Add back to inventory for customer returns, subtract for supplier returns)
+            if devolucion.tipo == "ESTUDIANTE":
+                producto.stock_actual += detalle.cantidad
+            else:  # PROVEEDOR
+                producto.stock_actual -= detalle.cantidad
             db.add(producto)
 
             # Create MovimientoInventario

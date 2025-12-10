@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import roles, users, login, funciones, acciones, permisos, rol_permisos, campus, estudiantes, gestion, parentesco, responsables, categorias_producto, productos, listas_precios, precios_producto, descuentos_estudiante, ventas, devoluciones, movimientos, carrito, ingresos, proveedores
+from app.api.v1.endpoints import programas, niveles, modulos, profesores, cursos, horarios, inscripciones, pagos_profesores, niveles_formacion, aulas, tipos_transaccion, niveles_academicos_estudiante
+from app.api.v1.endpoints import tipos_producto, paquetes, inscripciones_paquete
 
 api_router = APIRouter()
 api_router.include_router(login.router, tags=["login"])
@@ -25,3 +27,22 @@ api_router.include_router(movimientos.router, prefix="/movimientos", tags=["movi
 api_router.include_router(carrito.router, prefix="/carrito", tags=["carrito"])
 api_router.include_router(ingresos.router, prefix="/ingresos", tags=["ingresos"])
 api_router.include_router(proveedores.router, prefix="/proveedores", tags=["proveedores"])
+api_router.include_router(tipos_transaccion.router, prefix="/tipos-transaccion", tags=["tipos_transaccion"])
+
+# Academic Structure Endpoints
+api_router.include_router(programas.router, prefix="/programas", tags=["programas"])
+api_router.include_router(niveles.router, prefix="/niveles", tags=["niveles"])
+api_router.include_router(modulos.router, prefix="/modulos", tags=["modulos"])
+api_router.include_router(profesores.router, prefix="/profesores", tags=["profesores"])
+api_router.include_router(cursos.router, prefix="/cursos", tags=["cursos"])
+api_router.include_router(horarios.router, prefix="/horarios", tags=["horarios"])
+api_router.include_router(inscripciones.router, prefix="/inscripciones", tags=["inscripciones"])
+api_router.include_router(pagos_profesores.router, prefix="/pagos-profesores", tags=["pagos_profesores"])
+api_router.include_router(niveles_formacion.router, prefix="/niveles-formacion", tags=["niveles_formacion"])
+api_router.include_router(aulas.router, prefix="/aulas", tags=["aulas"])
+api_router.include_router(niveles_academicos_estudiante.router, prefix="/niveles-academicos-estudiante", tags=["niveles_academicos_estudiante"])
+
+# Enrollment Flow Endpoints
+api_router.include_router(tipos_producto.router, prefix="/tipos-producto", tags=["tipos_producto"])
+api_router.include_router(paquetes.router, prefix="/paquetes", tags=["paquetes"])
+api_router.include_router(inscripciones_paquete.router, prefix="/inscripciones-paquete", tags=["inscripciones_paquete"])

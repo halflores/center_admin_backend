@@ -32,12 +32,16 @@ class VentaBase(BaseModel):
     estudiante_id: Optional[int] = None
     cliente_nombre: Optional[str] = None
     metodo_pago: Optional[str] = None
+    tipo_transaccion_id: Optional[int] = None
+    nro_voucher: Optional[str] = None
+    paquete_id: Optional[int] = None
 
 class VentaCreate(VentaBase):
     detalles: List[DetalleVentaCreate]
 
 from app.schemas.user import UserResponse
 from app.schemas.estudiante import EstudianteResponse
+from app.schemas.tipo_transaccion import TipoTransaccionResponse
 
 class VentaResponse(VentaBase):
     id: int
@@ -45,6 +49,7 @@ class VentaResponse(VentaBase):
     usuario_id: Optional[int]
     usuario: Optional[UserResponse] = None
     estudiante: Optional[EstudianteResponse] = None
+    tipo_transaccion: Optional[TipoTransaccionResponse] = None
     total: Decimal
     estado: str
     detalles: List[DetalleVentaResponse]

@@ -1,9 +1,9 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.models import Estudiante
 from app.schemas.estudiante import EstudianteCreate, EstudianteUpdate
 
 def get_estudiante(db: Session, estudiante_id: int):
-    return db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
+    return db.query(Estudiante).options(joinedload(Estudiante.responsables)).filter(Estudiante.id == estudiante_id).first()
 
 def get_estudiantes(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Estudiante).offset(skip).limit(limit).all()
