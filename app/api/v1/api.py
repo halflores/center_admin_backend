@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import roles, users, login, funciones, acciones, permisos, rol_permisos, campus, estudiantes, gestion, parentesco, responsables, categorias_producto, productos, listas_precios, precios_producto, descuentos_estudiante, ventas, devoluciones, movimientos, carrito, ingresos, proveedores
 from app.api.v1.endpoints import programas, niveles, modulos, profesores, cursos, horarios, inscripciones, pagos_profesores, niveles_formacion, aulas, tipos_transaccion, niveles_academicos_estudiante
-from app.api.v1.endpoints import tipos_producto, paquetes, inscripciones_paquete
+from app.api.v1.endpoints import tipos_producto, paquetes, inscripciones_paquete, financial, cargos, empleados, library
 
 api_router = APIRouter()
 api_router.include_router(login.router, tags=["login"])
@@ -29,6 +29,10 @@ api_router.include_router(ingresos.router, prefix="/ingresos", tags=["ingresos"]
 api_router.include_router(proveedores.router, prefix="/proveedores", tags=["proveedores"])
 api_router.include_router(tipos_transaccion.router, prefix="/tipos-transaccion", tags=["tipos_transaccion"])
 
+# HR Module
+api_router.include_router(cargos.router, prefix="/cargos", tags=["cargos"])
+api_router.include_router(empleados.router, prefix="/empleados", tags=["empleados"])
+
 # Academic Structure Endpoints
 api_router.include_router(programas.router, prefix="/programas", tags=["programas"])
 api_router.include_router(niveles.router, prefix="/niveles", tags=["niveles"])
@@ -46,3 +50,9 @@ api_router.include_router(niveles_academicos_estudiante.router, prefix="/niveles
 api_router.include_router(tipos_producto.router, prefix="/tipos-producto", tags=["tipos_producto"])
 api_router.include_router(paquetes.router, prefix="/paquetes", tags=["paquetes"])
 api_router.include_router(inscripciones_paquete.router, prefix="/inscripciones-paquete", tags=["inscripciones_paquete"])
+
+# Financial Module Endpoints
+api_router.include_router(financial.router, prefix="/finanzas", tags=["financial"])
+
+# Library Module Endpoints
+api_router.include_router(library.router, prefix="/biblioteca", tags=["Biblioteca"])

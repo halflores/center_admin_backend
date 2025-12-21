@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text, UniqueConstraint, Numeric, Date, Time
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text, UniqueConstraint, Numeric, Date, Time, func
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 
@@ -668,3 +668,221 @@ class InscripcionPaquete(Base):
     venta = relationship("Venta")
     gestion = relationship("Gestion")
     profesor = relationship("Profesor")
+# ==================== BIBLIOTECA - NUEVOS MODELOS ====================
+
+class MultaPrestamo(Base):
+    __tablename__ = "multas_prestamo"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    prestamo_id = Column(Integer, ForeignKey("prestamos.id"), nullable=False)
+    dias_retraso = Column(Integer, nullable=False)
+    monto_por_dia = Column(Numeric(10, 2), default=1.00)
+    monto_total = Column(Numeric(10, 2), nullable=False)
+    fecha_calculo = Column(DateTime, default=datetime.utcnow)
+    pagado = Column(Boolean, default=False)
+    fecha_pago = Column(DateTime, nullable=True)
+    metodo_pago = Column(String(50), nullable=True)
+    observaciones = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    prestamo = relationship("Prestamo", back_populates="multas")
+
+
+class ModuloLibro(Base):
+    __tablename__ = "modulo_libros"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    modulo_id = Column(Integer, ForeignKey("modulos.id"), nullable=False)
+    libro_id = Column(Integer, ForeignKey("libros.id"), nullable=False)
+    orden = Column(Integer, default=1)
+    obligatorio = Column(Boolean, default=True)
+    descripcion = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    modulo = relationship("Modulo")
+    libro = relationship("Libro", back_populates="modulo_libros")
+    
+    __table_args__ = (UniqueConstraint('modulo_id', 'libro_id', name='_modulo_libro_uc'),)
+
+
+# ==================== FINANCIAL MODELS ====================
+
+class PlanPago(Base):
+    __tablename__ = "planes_pago"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    inscripcion_id = Column(Integer, ForeignKey("inscripciones.id"), nullable=True)
+    inscripcion_paquete_id = Column(Integer, ForeignKey("inscripcion_paquete.id"), nullable=True)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
+    monto_total = Column(Numeric(10, 2), nullable=False)
+    monto_pagado = Column(Numeric(10, 2), default=0.00)
+    saldo_pendiente = Column(Numeric(10, 2), nullable=False)
+    fecha_emision = Column(Date, server_default=func.current_date())
+    fecha_vencimiento = Column(Date, nullable=False)
+    estado = Column(String(20), default="PENDIENTE")
+    observaciones = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    estudiante = relationship("Estudiante")
+    detalles = relationship("DetallePlanPago", back_populates="plan_pago")
+
+
+class DetallePlanPago(Base):
+    __tablename__ = "detalle_plan_pago"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    plan_pago_id = Column(Integer, ForeignKey("planes_pago.id"), nullable=False)
+    monto = Column(Numeric(10, 2), nullable=False)
+    fecha_pago = Column(DateTime, default=datetime.utcnow)
+    metodo_pago = Column(String(50), nullable=True)
+    referencia_pago = Column(String(100), nullable=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    
+    plan_pago = relationship("PlanPago", back_populates="detalles")
+
+
+class PagoNomina(Base):
+    __tablename__ = "pagos_nomina"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_empleado_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    usuario_admin_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    monto = Column(Numeric(10, 2), nullable=False)
+    tipo_pago = Column(String(50), default="SUELDO")
+    descripcion = Column(Text, nullable=True)
+    fecha_pago = Column(Date, server_default=func.current_date())
+    periodo = Column(String(50), nullable=True)
+    metodo_pago = Column(String(50), nullable=True)
+    estado = Column(String(20), default="PENDIENTE")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ==================== HR MODELS ====================
+
+class Cargo(Base):
+    __tablename__ = "cargos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False, unique=True)
+    descripcion = Column(Text, nullable=True)
+    salario_base = Column(Numeric(10, 2), nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    empleados = relationship("Empleado", back_populates="cargo")
+
+
+class Empleado(Base):
+    __tablename__ = "empleados"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombres = Column(String(100), nullable=False)
+    apellidos = Column(String(100), nullable=False)
+    ci = Column(String(20), unique=True, nullable=False, index=True)
+    fecha_nacimiento = Column(Date, nullable=True)
+    genero = Column(String(10), nullable=True)
+    cargo_id = Column(Integer, ForeignKey("cargos.id"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True, unique=True)
+    fecha_contratacion = Column(Date, server_default=func.current_date())
+    salario = Column(Numeric(10, 2), nullable=True)
+    correo = Column(String(150), nullable=True)
+    direccion = Column(String(255), nullable=True)
+    celular = Column(String(20), nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    cargo = relationship("Cargo", back_populates="empleados")
+    usuario = relationship("Usuario")
+
+
+# ==================== FINANCIAL - GASTOS Y CAJA ====================
+
+class CategoriaGasto(Base):
+    __tablename__ = "categorias_gasto"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False, unique=True)
+    descripcion = Column(Text, nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    gastos = relationship("Gasto", back_populates="categoria")
+
+
+class Gasto(Base):
+    __tablename__ = "gastos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    categoria_id = Column(Integer, ForeignKey("categorias_gasto.id"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    monto = Column(Numeric(10, 2), nullable=False)
+    descripcion = Column(Text, nullable=False)
+    fecha_gasto = Column(DateTime, default=datetime.utcnow)
+    comprobante_referencia = Column(String(100), nullable=True)
+    metodo_pago = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    categoria = relationship("CategoriaGasto", back_populates="gastos")
+    usuario = relationship("Usuario")
+
+
+class CajaSesion(Base):
+    __tablename__ = "caja_sesiones"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    fecha_apertura = Column(DateTime, default=datetime.utcnow)
+    fecha_cierre = Column(DateTime, nullable=True)
+    monto_inicial = Column(Numeric(10, 2), default=0.00)
+    monto_final_esperado = Column(Numeric(10, 2), nullable=True)
+    monto_final_real = Column(Numeric(10, 2), nullable=True)
+    diferencia = Column(Numeric(10, 2), nullable=True)
+    estado = Column(String(20), default="ABIERTA")
+    observaciones = Column(Text, nullable=True)
+    
+    usuario = relationship("Usuario")
+    movimientos = relationship("CajaMovimiento", back_populates="sesion")
+    arqueo = relationship("CajaArqueo", back_populates="sesion", uselist=False)
+
+
+class CajaMovimiento(Base):
+    __tablename__ = "caja_movimientos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    sesion_id = Column(Integer, ForeignKey("caja_sesiones.id"), nullable=True)
+    tipo = Column(String(20), nullable=False)
+    categoria = Column(String(50), nullable=False)
+    monto = Column(Numeric(10, 2), nullable=False)
+    descripcion = Column(Text, nullable=True)
+    fecha = Column(DateTime, default=datetime.utcnow)
+    referencia_tabla = Column(String(50), nullable=True)
+    referencia_id = Column(Integer, nullable=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    metodo_pago = Column(String(50), nullable=True)
+    numero_voucher = Column(String(100), nullable=True)
+    
+    sesion = relationship("CajaSesion", back_populates="movimientos")
+    usuario = relationship("Usuario")
+
+
+class CajaArqueo(Base):
+    __tablename__ = "caja_arqueos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    sesion_id = Column(Integer, ForeignKey("caja_sesiones.id"), nullable=False, unique=True)
+    billetes_200 = Column(Integer, default=0)
+    billetes_100 = Column(Integer, default=0)
+    billetes_50 = Column(Integer, default=0)
+    billetes_20 = Column(Integer, default=0)
+    billetes_10 = Column(Integer, default=0)
+    monedas_5 = Column(Integer, default=0)
+    monedas_2 = Column(Integer, default=0)
+    monedas_1 = Column(Integer, default=0)
+    monedas_050 = Column(Integer, default=0)
+    total_contado = Column(Numeric(10, 2), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    sesion = relationship("CajaSesion", back_populates="arqueo")

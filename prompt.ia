@@ -315,5 +315,20 @@ id|nombre     |nombre             |nombre|
  6|Super Admin|users              |update|
 
 
+crear un plan para el modulo financiero
 
+crear un modulo financiero
+contempla el flujo de caja
+administrar los recursos humanos, pagos de sueldos y bonificaciones
+registro de compras de servicios y productos
+registro de pagos por cobrar de matricula o mensualidad de estudiantes
+registro de faltantes y sobrantes de caja
+agregar alguna funcionalidad que sugiera
+
+
+crear un plan para el modulo de recursos humanos
+
+realizar un submodulo de recursos humanos
+se registra un empleado con fecha de ingreso, salario, bonificaciones, cargo que desempeña, 
+los cargos se registran en una tabla de cargos
 

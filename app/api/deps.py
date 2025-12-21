@@ -37,6 +37,13 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+def get_current_active_user(
+    current_user: Usuario = Depends(get_current_user),
+) -> Usuario:
+    # if not current_user.activo:
+    #     raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
 def check_permission(required_permission: str):
     def permission_checker(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
         # Check if user is superadmin (optional, depending on your logic)

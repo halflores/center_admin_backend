@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
-from app.models.models import Venta, DetalleVenta, Producto, MovimientoInventario, Estudiante, InscripcionPaquete, Gestion
+from app.models.models import Venta, DetalleVenta, Producto, MovimientoInventario, Estudiante, InscripcionPaquete, Gestion, PlanPago
 from app.schemas.venta import VentaCreate
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 def create_venta(db: Session, venta: VentaCreate, usuario_id: int):
@@ -73,6 +73,7 @@ def create_venta(db: Session, venta: VentaCreate, usuario_id: int):
         db.add(db_venta)
 
         # Create InscripcionPaquete if paquete_id is present
+        # Create InscripcionPaquete if paquete_id is present
         if venta.paquete_id and venta.estudiante_id:
             # Get active gestion (term) based on current year and max nro
             # Since 'activo' column doesn't exist, we assume the latest term of the current year is active
@@ -92,6 +93,28 @@ def create_venta(db: Session, venta: VentaCreate, usuario_id: int):
                 fecha_inscripcion=now_bolivia
             )
             db.add(inscripcion)
+            db.flush() # Need ID for PlanPago potentially
+
+        # Handle CREDITO / DEUDA
+        if venta.metodo_pago == 'CREDITO':
+            if not venta.estudiante_id:
+                raise Exception("Para ventas a crédito, se debe seleccionar un estudiante.")
+            
+            plan_pago = PlanPago(
+                estudiante_id=venta.estudiante_id,
+                monto_total=total,
+                monto_pagado=0,
+                saldo_pendiente=total,
+                fecha_emision=now_bolivia,
+                fecha_vencimiento=now_bolivia + timedelta(days=30), # Default 30 days
+                estado='PENDIENTE',
+                observaciones=f"Venta Crédito #{db_venta.id}"
+            )
+            
+            if venta.paquete_id and 'inscripcion' in locals():
+                plan_pago.inscripcion_paquete_id = inscripcion.id
+                
+            db.add(plan_pago)
 
         db.commit()
         db.refresh(db_venta)
