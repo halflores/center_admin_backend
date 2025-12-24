@@ -670,6 +670,143 @@ class InscripcionPaquete(Base):
     profesor = relationship("Profesor")
 # ==================== BIBLIOTECA - NUEVOS MODELOS ====================
 
+class GeneroLiterario(Base):
+    __tablename__ = "generos_literarios"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), unique=True, nullable=False)
+    descripcion = Column(Text, nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    libros = relationship("Libro", back_populates="genero")
+
+
+class Editorial(Base):
+    __tablename__ = "editoriales"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(200), nullable=False)
+    pais = Column(String(100), nullable=True)
+    sitio_web = Column(String(255), nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    libros = relationship("Libro", back_populates="editorial")
+
+
+class Autor(Base):
+    __tablename__ = "autores"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombres = Column(String(100), nullable=False)
+    apellidos = Column(String(100), nullable=False)
+    nacionalidad = Column(String(100), nullable=True)
+    biografia = Column(Text, nullable=True)
+    fecha_nacimiento = Column(Date, nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    libro_autores = relationship("LibroAutor", back_populates="autor")
+
+
+class Libro(Base):
+    __tablename__ = "libros"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    isbn = Column(String(20), unique=True, nullable=False)
+    titulo = Column(String(255), nullable=False)
+    subtitulo = Column(String(255), nullable=True)
+    genero_id = Column(Integer, ForeignKey("generos_literarios.id"), nullable=False)
+    editorial_id = Column(Integer, ForeignKey("editoriales.id"), nullable=False)
+    anio_publicacion = Column(Integer, nullable=True)
+    numero_paginas = Column(Integer, nullable=True)
+    idioma = Column(String(50), default='Español')
+    cantidad_total = Column(Integer, default=1, nullable=False)
+    cantidad_disponible = Column(Integer, default=1, nullable=False)
+    ubicacion_fisica = Column(String(100), nullable=True)
+    descripcion = Column(Text, nullable=True)
+    imagen_portada = Column(String(255), nullable=True)
+    estado = Column(String(20), default='DISPONIBLE')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    genero = relationship("GeneroLiterario", back_populates="libros")
+    editorial = relationship("Editorial", back_populates="libros")
+    libro_autores = relationship("LibroAutor", back_populates="libro", cascade="all, delete-orphan")
+    prestamos = relationship("Prestamo", back_populates="libro")
+    reservas = relationship("Reserva", back_populates="libro")
+    modulo_libros = relationship("ModuloLibro", back_populates="libro")
+
+
+class LibroAutor(Base):
+    __tablename__ = "libro_autores"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    libro_id = Column(Integer, ForeignKey("libros.id", ondelete="CASCADE"), nullable=False)
+    autor_id = Column(Integer, ForeignKey("autores.id"), nullable=False)
+    orden = Column(Integer, default=1)
+    
+    libro = relationship("Libro", back_populates="libro_autores")
+    autor = relationship("Autor", back_populates="libro_autores")
+
+
+class Prestamo(Base):
+    __tablename__ = "prestamos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    libro_id = Column(Integer, ForeignKey("libros.id"), nullable=False)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=True)
+    profesor_id = Column(Integer, ForeignKey("profesores.id"), nullable=True)
+    usuario_registro_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False) # Admin/Librarian who registered loan
+    
+    fecha_prestamo = Column(Date, default=func.current_date(), nullable=False)
+    fecha_devolucion_esperada = Column(Date, nullable=False)
+    fecha_devolucion_real = Column(Date, nullable=True)
+    estado = Column(String(20), default='ACTIVO') # ACTIVO, DEVUELTO, VENCIDO
+    observaciones = Column(Text, nullable=True)
+    multa = Column(Numeric(10, 2), default=0.00)
+    
+    # New fields for advanced loan system (from service)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True) # User borrowing (generic)
+    tipo_prestamo = Column(String(50), nullable=True) # PERSONAL, ACADEMICO
+    modulo_id = Column(Integer, ForeignKey("modulos.id"), nullable=True)
+    es_extracurricular = Column(Boolean, default=False, nullable=False)  # Préstamo fuera del módulo del estudiante
+    dias_retraso = Column(Integer, default=0)
+    monto_multa = Column(Numeric(10, 2), default=0.00)
+    multa_pagada = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    libro = relationship("Libro", back_populates="prestamos")
+    estudiante = relationship("Estudiante")
+    profesor = relationship("Profesor")
+    usuario = relationship("Usuario", foreign_keys=[usuario_id])
+    multas = relationship("MultaPrestamo", back_populates="prestamo")
+
+
+class Reserva(Base):
+    __tablename__ = "reservas"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    libro_id = Column(Integer, ForeignKey("libros.id"), nullable=False)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=True)
+    profesor_id = Column(Integer, ForeignKey("profesores.id"), nullable=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True) # Generic user
+    
+    fecha_reserva = Column(Date, default=func.current_date(), nullable=False)
+    fecha_expiracion = Column(Date, nullable=True) # Can be null initially
+    estado = Column(String(20), default='PENDIENTE') # PENDIENTE, ACTIVA, CANCELADA, COMPLETADA
+    notificado = Column(Boolean, default=False)
+    fecha_notificacion = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    libro = relationship("Libro", back_populates="reservas")
+    estudiante = relationship("Estudiante")
+    profesor = relationship("Profesor")
+    usuario = relationship("Usuario", foreign_keys=[usuario_id])
+
 class MultaPrestamo(Base):
     __tablename__ = "multas_prestamo"
     
@@ -695,7 +832,9 @@ class ModuloLibro(Base):
     modulo_id = Column(Integer, ForeignKey("modulos.id"), nullable=False)
     libro_id = Column(Integer, ForeignKey("libros.id"), nullable=False)
     orden = Column(Integer, default=1)
-    obligatorio = Column(Boolean, default=True)
+    obligatorio = Column(Boolean, default=True)  # Mantener por compatibilidad
+    tipo_asignacion = Column(String(20), default="recomendado", nullable=False)  # 'obligatorio' o 'recomendado'
+    activo = Column(Boolean, default=True)
     descripcion = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

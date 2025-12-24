@@ -227,7 +227,8 @@ class LibraryService:
         query = db.query(Prestamo).options(
             joinedload(Prestamo.libro),
             joinedload(Prestamo.estudiante),
-            joinedload(Prestamo.profesor)
+            joinedload(Prestamo.profesor),
+            joinedload(Prestamo.usuario)
         )
         if estado:
             query = query.filter(Prestamo.estado == estado)
@@ -241,10 +242,20 @@ class LibraryService:
         if not libro or libro.cantidad_disponible < 1:
             raise ValueError("Libro no disponible")
 
+        # Determinar si es extracurricular
+        es_extracurricular = False
+        if prestamo_in.estudiante_id:
+            es_extracurricular = LibraryService.verificar_es_extracurricular(
+                db, 
+                prestamo_in.estudiante_id, 
+                prestamo_in.libro_id
+            )
+
         # Create loan
         db_prestamo = Prestamo(
             **prestamo_in.model_dump(),
-            usuario_registro_id=usuario_registro_id
+            usuario_registro_id=usuario_registro_id,
+            es_extracurricular=es_extracurricular
         )
         db.add(db_prestamo)
         
@@ -286,8 +297,9 @@ class LibraryService:
         return db.query(Reserva).options(
             joinedload(Reserva.libro),
             joinedload(Reserva.estudiante),
-            joinedload(Reserva.profesor)
-        ).filter(Reserva.estado == 'PENDIENTE').offset(skip).limit(limit).all()
+            joinedload(Reserva.profesor),
+            joinedload(Reserva.usuario)
+        ).offset(skip).limit(limit).all()
 
     @staticmethod
     def create_reserva(db: Session, reserva_in: ReservaCreate):
@@ -358,7 +370,7 @@ class LibraryService:
     @staticmethod
     def create_prestamo_academico(db: Session, libro_id: int, usuario_id: int, modulo_id: int,
                                   fecha_prestamo: date, fecha_devolucion_esperada: date, 
-                                  observaciones: str = None):
+                                  observaciones: str = None, usuario_registro_id: int = None):
         """Create an academic loan (module-based)"""
         if not LibraryService.verificar_disponibilidad(db, libro_id):
             raise ValueError("El libro no está disponible para préstamo")
@@ -374,15 +386,17 @@ class LibraryService:
         if not modulo_libro:
             raise ValueError("Este libro no está asignado al módulo especificado")
         
+        # For academic loans, usuario_id is the student ID, so we use estudiante_id field
         db_prestamo = Prestamo(
             libro_id=libro_id,
-            usuario_id=usuario_id,
+            estudiante_id=usuario_id,  # Store student ID in estudiante_id field
             tipo_prestamo="ACADEMICO",
             modulo_id=modulo_id,
             fecha_prestamo=fecha_prestamo,
             fecha_devolucion_esperada=fecha_devolucion_esperada,
             observaciones=observaciones,
-            estado="ACTIVO"
+            estado="ACTIVO",
+            usuario_registro_id=usuario_registro_id
         )
         
         db.add(db_prestamo)
@@ -471,7 +485,12 @@ class LibraryService:
     @staticmethod
     def get_prestamos_calendario(db: Session, fecha_inicio: date, fecha_fin: date):
         """Get loans for calendar view"""
-        return db.query(Prestamo).filter(
+        return db.query(Prestamo).options(
+            joinedload(Prestamo.libro),
+            joinedload(Prestamo.estudiante),
+            joinedload(Prestamo.profesor),
+            joinedload(Prestamo.usuario)
+        ).filter(
             or_(
                 and_(
                     Prestamo.fecha_prestamo >= fecha_inicio,
@@ -525,27 +544,36 @@ class LibraryService:
     # ==================== RESERVAS MEJORADAS ====================
     
     @staticmethod
-    def create_reserva_v2(db: Session, libro_id: int, usuario_id: int):
-        """Create a book reservation"""
+    def create_reserva_v2(db: Session, libro_id: int, usuario_id: Optional[int] = None, 
+                         estudiante_id: Optional[int] = None, profesor_id: Optional[int] = None):
+        """Create a book reservation for user, student, or professor"""
         # Check if book is available
         if LibraryService.verificar_disponibilidad(db, libro_id):
             raise ValueError("El libro está disponible, no es necesario reservar")
         
-        # Check if user already has an active reservation for this book
-        existing = db.query(Reserva).filter(
-            and_(
-                Reserva.libro_id == libro_id,
-                Reserva.usuario_id == usuario_id,
-                Reserva.estado == "ACTIVA"
-            )
-        ).first()
+        # Build filter for existing active reservation
+        reservation_filter = [Reserva.libro_id == libro_id, Reserva.estado == "ACTIVA"]
+        
+        if estudiante_id:
+            reservation_filter.append(Reserva.estudiante_id == estudiante_id)
+        elif profesor_id:
+            reservation_filter.append(Reserva.profesor_id == profesor_id)
+        elif usuario_id:
+            reservation_filter.append(Reserva.usuario_id == usuario_id)
+        else:
+            raise ValueError("Debe especificar un usuario, estudiante o profesor")
+
+        # Check if already has an active reservation for this book
+        existing = db.query(Reserva).filter(and_(*reservation_filter)).first()
         
         if existing:
-            raise ValueError("Ya tienes una reserva activa para este libro")
+            raise ValueError("Ya existe una reserva activa para este libro")
         
         db_reserva = Reserva(
             libro_id=libro_id,
             usuario_id=usuario_id,
+            estudiante_id=estudiante_id,
+            profesor_id=profesor_id,
             estado="ACTIVA"
         )
         
@@ -578,6 +606,53 @@ class LibraryService:
             # TODO: Send actual notification (email/SMS)
         
         db.commit()
+
+    @staticmethod
+    def entregar_reserva(db: Session, reserva_id: int, usuario_registro_id: int):
+        """Convert an active reservation into a physical loan"""
+        from datetime import date, timedelta
+        
+        reserva = db.query(Reserva).filter(Reserva.id == reserva_id).first()
+        if not reserva:
+            raise ValueError("Reserva no encontrada")
+        
+        if reserva.estado != "ACTIVA":
+            raise ValueError(f"No se puede entregar una reserva en estado {reserva.estado}")
+            
+        # Verify book availability
+        libro = db.query(Libro).filter(Libro.id == reserva.libro_id).first()
+        if not libro or libro.cantidad_disponible < 1:
+            raise ValueError("Libro no disponible para entrega")
+
+        # Determine loan type and return date (Default to personal 7 days)
+        # We could improve this by asking the type, but 7 days is a safe default for reservations
+        fecha_prestamo = date.today()
+        fecha_devolucion_esperada = fecha_prestamo + timedelta(days=7)
+        
+        # Create loan
+        db_prestamo = Prestamo(
+            libro_id=reserva.libro_id,
+            estudiante_id=reserva.estudiante_id,
+            profesor_id=reserva.profesor_id,
+            usuario_id=reserva.usuario_id,
+            tipo_prestamo="PERSONAL", # Defaulting to personal when picking up reservation
+            fecha_prestamo=fecha_prestamo,
+            fecha_devolucion_esperada=fecha_devolucion_esperada,
+            estado="ACTIVO",
+            usuario_registro_id=usuario_registro_id
+        )
+        db.add(db_prestamo)
+        
+        # Mark reservation as completed
+        reserva.estado = "COMPLETADA"
+        
+        # Decrease book availability
+        libro.cantidad_disponible -= 1
+        
+        db.commit()
+        db.refresh(db_prestamo)
+        return db_prestamo
+
     
     # ==================== MÓDULO-LIBROS ====================
     
@@ -632,4 +707,193 @@ class LibraryService:
         db.delete(modulo_libro)
         db.commit()
         return True
+
+    @staticmethod
+    def get_libros_sugeridos_estudiante(db: Session, estudiante_id: int):
+        """
+        Obtiene libros sugeridos para un estudiante basado en su módulo actual.
+        Retorna libros obligatorios y recomendados con información de disponibilidad.
+        Check InscripcionPaquete first, then fallback to Inscripcion.
+        """
+        from app.models.models import Estudiante, Inscripcion, Curso, Modulo, InscripcionPaquete, Paquete
+        
+
+        try:
+            # Obtener el estudiante
+            estudiante = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
+            if not estudiante:
+                raise ValueError("Estudiante no encontrado")
+            
+            modulo_id = None  # Initialize to None
+            error_p = ""
+            error_f = ""
+
+            # 1. Try InscripcionPaquete (New System)
+            try:
+                print(f"DEBUG: Checking InscripcionPaquete for student {estudiante_id}")
+                inscripcion_paquete = db.query(InscripcionPaquete).join(Paquete).filter(
+                    InscripcionPaquete.estudiante_id == estudiante_id,
+                    InscripcionPaquete.estado_academico.in_(['INSCRITO', 'Inscrito', 'inscrito'])
+                ).order_by(InscripcionPaquete.fecha_inscripcion.desc()).first()
+
+                if inscripcion_paquete:
+                    print(f"DEBUG: Found InscripcionPaquete: ID={inscripcion_paquete.id}, Paquete={inscripcion_paquete.paquete_id}")
+                    if inscripcion_paquete.paquete:
+                        print(f"DEBUG: Paquete found: {inscripcion_paquete.paquete.nombre}, ModuloID={inscripcion_paquete.paquete.modulo_id}")
+                        if inscripcion_paquete.paquete.modulo_id:
+                            modulo_id = inscripcion_paquete.paquete.modulo_id
+                else:
+                    print("DEBUG: No InscripcionPaquete found with status INSCRITO")
+            except Exception as e:
+                print(f"DEBUG: Error checking InscripcionPaquete: {e}")
+                error_p = str(e)
+                import traceback
+                traceback.print_exc()
+
+            # 2. Fallback to Inscripcion (Old System)
+            if not modulo_id:
+                print("DEBUG: Fallback to old Inscripcion table")
+                try:
+                    inscripcion_activa = db.query(Inscripcion).join(Curso).filter(
+                        Inscripcion.estudiante_id == estudiante_id,
+                        Inscripcion.estado.in_(['ACTIVO', 'Activo', 'activo'])
+                    ).first()
+                    
+                    if inscripcion_activa:
+                        print(f"DEBUG: Found old Inscripcion: {inscripcion_activa.id}")
+                        if inscripcion_activa.curso and inscripcion_activa.curso.modulo_id:
+                            modulo_id = inscripcion_activa.curso.modulo_id
+                            print(f"DEBUG: Resolved module from old system: {modulo_id}")
+                    else:
+                        print("DEBUG: No ACTIVE old Inscripcion found")
+                except Exception as e:
+                     print(f"DEBUG: Error checking old Inscripcion: {e}")
+                     error_f = str(e)
+                     import traceback
+                     traceback.print_exc()
+            
+            if not modulo_id:
+                # DEBUG HACK: Return error as book
+                return [{
+                    "id": 0,
+                    "titulo": f"ERR: P={error_p} | F={error_f}",
+                    "isbn": "ERROR",
+                    "autor": "SYSTEM",
+                    "editorial": "DEBUG",
+                    "disponible": False,
+                    "copias_disponibles": 0,
+                    "tipo_asignacion": "obligatorio",
+                    "orden": 0,
+                    "modulo_id": 0
+                }]
+            
+            print(f"DEBUG: Fetching books for module {modulo_id}")
+            
+            # Obtener libros asociados al módulo (activos)
+            asociaciones = db.query(ModuloLibro).options(
+                joinedload(ModuloLibro.libro)
+            ).filter(
+                ModuloLibro.modulo_id == modulo_id,
+                ModuloLibro.activo == True
+            ).all()
+            
+            # Construir respuesta con información de disponibilidad
+            libros_sugeridos = []
+            
+            for asoc in asociaciones:
+                libro = asoc.libro
+                if not libro:
+                    continue
+                
+                # Verificar disponibilidad
+                disponible = libro.cantidad_disponible > 0 if hasattr(libro, 'cantidad_disponible') else True
+                copias_disponibles = libro.cantidad_disponible if hasattr(libro, 'cantidad_disponible') else 0
+                
+                # Get authors string
+                autores_str = "Desconocido"
+                if libro.libro_autores:
+                    nombres_autores = []
+                    for la in libro.libro_autores:
+                        if la.autor:
+                            nombres_autores.append(f"{la.autor.nombres} {la.autor.apellidos}")
+                    if nombres_autores:
+                        autores_str = ", ".join(nombres_autores)
+
+                libros_sugeridos.append({
+                    "id": libro.id,
+                    "titulo": libro.titulo,
+                    "isbn": libro.isbn,
+                    "autor": autores_str, 
+                    "editorial": libro.editorial.nombre if libro.editorial else "Sin Editorial",
+                    "disponible": disponible,
+                    "copias_disponibles": copias_disponibles,
+                    "tipo_asignacion": asoc.tipo_asignacion,
+                    "orden": asoc.orden,
+                    "modulo_id": modulo_id # Return the found module ID so frontend can use it if needed
+                })
+            
+            # Ordenar: obliga
+            
+            # Ordenar: obligatorios primero, luego por orden, luego por disponibilidad
+            libros_sugeridos.sort(key=lambda x: (
+                x["tipo_asignacion"] != "obligatorio",  # obligatorio primero
+                x["orden"],  # luego por orden
+                not x["disponible"]  # disponibles primero
+            ))
+            
+            return libros_sugeridos
+            
+        except Exception as e:
+            print(f"CRITICAL ERROR in get_libros_sugeridos_estudiante: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    @staticmethod
+    def verificar_es_extracurricular(db: Session, estudiante_id: int, libro_id: int) -> bool:
+        """
+        Verifica si un préstamo es extracurricular (libro no asociado al módulo del estudiante).
+        """
+        from app.models.models import Inscripcion, InscripcionPaquete, Paquete, Curso
+        
+        if not estudiante_id:
+            return False  # Si no hay estudiante, no es extracurricular
+        
+        modulo_id = None
+        
+        # 1. Try InscripcionPaquete
+        try:
+            inscripcion_paquete = db.query(InscripcionPaquete).join(Paquete).filter(
+                InscripcionPaquete.estudiante_id == estudiante_id,
+                InscripcionPaquete.estado_academico.in_(['INSCRITO', 'Inscrito', 'inscrito'])
+            ).order_by(InscripcionPaquete.fecha_inscripcion.desc()).first()
+
+            if inscripcion_paquete and inscripcion_paquete.paquete and inscripcion_paquete.paquete.modulo_id:
+                modulo_id = inscripcion_paquete.paquete.modulo_id
+        except Exception as e:
+            print(f"DEBUG: Error checking InscripcionPaquete in verify: {e}")
+
+        # 2. Fallback to Inscripcion
+        if not modulo_id:
+            try:
+                inscripcion = db.query(Inscripcion).join(Curso).filter(
+                    Inscripcion.estudiante_id == estudiante_id,
+                    Inscripcion.estado.in_(['ACTIVO', 'Activo', 'activo'])
+                ).first()
+                if inscripcion and inscripcion.curso and inscripcion.curso.modulo_id:
+                     modulo_id = inscripcion.curso.modulo_id
+            except Exception as e:
+                print(f"DEBUG: Error checking old Inscripcion in verify: {e}")
+        
+        if not modulo_id:
+            return True  # Sin módulo activo, considerarlo extracurricular
+        
+        # Verificar si el libro está asociado al módulo
+        asociacion = db.query(ModuloLibro).filter(
+            ModuloLibro.modulo_id == modulo_id,
+            ModuloLibro.libro_id == libro_id,
+            ModuloLibro.activo == True
+        ).first()
+        
+        return asociacion is None  # Es extracurricular si no hay asociación
 

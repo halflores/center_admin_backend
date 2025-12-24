@@ -176,6 +176,23 @@ def cancelar_reserva(reserva_id: int, db: Session = Depends(get_db), current_use
     raise HTTPException(status_code=404, detail="Reserva no encontrada")
 
 
+# --- Libros Sugeridos para Estudiantes ---
+@router.get("/estudiantes/{estudiante_id}/libros-sugeridos")
+def get_libros_sugeridos_estudiante(
+    estudiante_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """
+    Obtiene libros sugeridos para un estudiante basado en su módulo actual.
+    Incluye tanto libros obligatorios como recomendados.
+    """
+    try:
+        return LibraryService.get_libros_sugeridos_estudiante(db, estudiante_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ==================== NUEVOS ENDPOINTS SISTEMA DE PRÉSTAMOS ====================
 
 # --- Préstamos Personales ---
@@ -213,7 +230,8 @@ def create_prestamo_academico(
     try:
         return LibraryService.create_prestamo_academico(
             db, libro_id, usuario_id, modulo_id, 
-            fecha_prestamo, fecha_devolucion_esperada, observaciones
+            fecha_prestamo, fecha_devolucion_esperada, observaciones,
+            usuario_registro_id=current_user.id
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -300,13 +318,28 @@ def pagar_multa(
 @router.post("/reservas/v2", response_model=ReservaOut)
 def create_reserva_v2(
     libro_id: int,
-    usuario_id: int,
+    usuario_id: Optional[int] = None,
+    estudiante_id: Optional[int] = None,
+    profesor_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
     """Create a book reservation with validation"""
     try:
-        return LibraryService.create_reserva_v2(db, libro_id, usuario_id)
+        return LibraryService.create_reserva_v2(db, libro_id, usuario_id, estudiante_id, profesor_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/reservas/{reserva_id}/entregar", response_model=PrestamoOut)
+def entregar_reserva(
+    reserva_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """Register delivery of a reserved book (converts reservation to loan)"""
+    try:
+        return LibraryService.entregar_reserva(db, reserva_id, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

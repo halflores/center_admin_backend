@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import roles, users, login, funciones, acciones, permisos, rol_permisos, campus, estudiantes, gestion, parentesco, responsables, categorias_producto, productos, listas_precios, precios_producto, descuentos_estudiante, ventas, devoluciones, movimientos, carrito, ingresos, proveedores
 from app.api.v1.endpoints import programas, niveles, modulos, profesores, cursos, horarios, inscripciones, pagos_profesores, niveles_formacion, aulas, tipos_transaccion, niveles_academicos_estudiante
 from app.api.v1.endpoints import tipos_producto, paquetes, inscripciones_paquete, financial, cargos, empleados, library
+from app.routers import modulo_libros
 
 api_router = APIRouter()
 api_router.include_router(login.router, tags=["login"])
@@ -56,3 +57,5 @@ api_router.include_router(financial.router, prefix="/finanzas", tags=["financial
 
 # Library Module Endpoints
 api_router.include_router(library.router, prefix="/biblioteca", tags=["Biblioteca"])
+api_router.include_router(modulo_libros.router, tags=["modulo-libros"])
+

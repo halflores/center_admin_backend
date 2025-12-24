@@ -135,7 +135,7 @@ class LibroOutDetailed(LibroOut):
 # --- Préstamo ---
 class PrestamoBase(BaseModel):
     libro_id: int
-    usuario_id: int
+    usuario_id: Optional[int] = None  # Optional because academic loans use estudiante_id/profesor_id
     tipo_prestamo: Optional[str] = "PERSONAL"  # PERSONAL, ACADEMICO
     modulo_id: Optional[int] = None
     fecha_prestamo: date
@@ -150,6 +150,15 @@ class PrestamoUpdate(BaseModel):
     fecha_devolucion: Optional[date] = None
     observaciones: Optional[str] = None
 
+# Forward references to avoid circular imports (if any, though here we import directly)
+# Note: Pydantic handles forward refs automatically for the most part or via update_forward_refs() if needed.
+# But putting imports inside the file logic or at top is fine if no cycle.
+# library -> estudiante -> ... -> library? No, estudiante doesn't import library.
+
+from app.schemas.estudiante import EstudianteResponse
+from app.schemas.profesor import ProfesorResponse
+from app.schemas.user import UserResponse
+
 class PrestamoOut(PrestamoBase):
     id: int
     fecha_devolucion: Optional[date] = None
@@ -159,12 +168,19 @@ class PrestamoOut(PrestamoBase):
     multa_pagada: bool
     created_at: datetime
     updated_at: datetime
+    
+    # Relationships for display
+    estudiante: Optional[EstudianteResponse] = None
+    profesor: Optional[ProfesorResponse] = None
+    usuario: Optional[UserResponse] = None
+    libro: Optional[LibroOut] = None
 
     class Config:
         from_attributes = True
 
 class PrestamoOutDetailed(PrestamoOut):
-    libro: LibroOut
+    pass
+
 
 # --- Multa Préstamo ---
 class MultaPrestamoBase(BaseModel):
@@ -197,7 +213,9 @@ class MultaPrestamoOut(MultaPrestamoBase):
 # --- Reserva ---
 class ReservaBase(BaseModel):
     libro_id: int
-    usuario_id: int
+    usuario_id: Optional[int] = None
+    estudiante_id: Optional[int] = None
+    profesor_id: Optional[int] = None
 
 class ReservaCreate(ReservaBase):
     pass
@@ -209,19 +227,25 @@ class ReservaUpdate(BaseModel):
 
 class ReservaOut(ReservaBase):
     id: int
-    fecha_reserva: datetime
+    fecha_reserva: date # Changed to date to match model
     estado: str
     fecha_notificacion: Optional[datetime] = None
-    fecha_expiracion: Optional[datetime] = None
+    fecha_expiracion: Optional[date] = None # Changed to date to match model
     notificado: bool
-    observaciones: Optional[str] = None
+    # observations: Optional[str] = None # Not in model
     created_at: datetime
+    
+    # Relationships for display
+    estudiante: Optional[EstudianteResponse] = None
+    profesor: Optional[ProfesorResponse] = None
+    usuario: Optional[UserResponse] = None
+    libro: Optional[LibroOut] = None
 
     class Config:
         from_attributes = True
 
 class ReservaOutDetailed(ReservaOut):
-    libro: LibroOut
+    pass
 
 # --- Módulo Libro ---
 class ModuloLibroBase(BaseModel):

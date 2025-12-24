@@ -36,7 +36,15 @@ def load_settings() -> Settings:
         except Exception as e:
             print(f"Warning: Error loading config.yaml: {e}")
 
-    # 3. Construct Database URL (if not set via env var explicitly)
+    # 3. Enforce Environment Variables Override (Docker-friendly)
+    # This ensures that if we pass -e DB_HOST=... it wins over config.yaml
+    if os.getenv("DB_HOST"): settings.DB_HOST = os.getenv("DB_HOST")
+    if os.getenv("DB_PORT"): settings.DB_PORT = int(os.getenv("DB_PORT"))
+    if os.getenv("DB_NAME"): settings.DB_NAME = os.getenv("DB_NAME")
+    if os.getenv("DB_USER"): settings.DB_USER = os.getenv("DB_USER")
+    if os.getenv("DB_PASSWORD"): settings.DB_PASSWORD = os.getenv("DB_PASSWORD")
+
+    # 4. Construct Database URL (if not set via env var explicitly)
     if not settings.DATABASE_URL:
         settings.DATABASE_URL = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
     

@@ -1,39 +1,34 @@
 import os
 import sys
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import reflection
 
-# Add current directory to path
-sys.path.append(os.getcwd())
-from app.db.session import SessionLocal
+# Ensure we can find the app modules
+sys.path.append('/app')
+
+from sqlalchemy import create_engine, text
+from app.core.config import settings
 
 def fix_schema():
-    db = SessionLocal()
-    engine = db.get_bind()
-    inspector = reflection.Inspector.from_engine(engine)
+    print(f"Connecting to DB: {settings.DATABASE_URL.replace(settings.DB_PASSWORD, '***')}")
+    engine = create_engine(settings.DATABASE_URL)
     
-    columns = [c['name'] for c in inspector.get_columns('ventas')]
-    print(f"Current columns in 'ventas': {columns}")
-    
-    with engine.connect() as conn:
-        with conn.begin(): # Start transaction
-            if 'tipo_transaccion_id' not in columns:
-                print("Adding missing column: tipo_transaccion_id")
-                # Using text() for raw SQL execution
-                conn.execute(text("ALTER TABLE ventas ADD COLUMN tipo_transaccion_id INTEGER REFERENCES tipos_transaccion(id)"))
-            else:
-                print("Column 'tipo_transaccion_id' already exists.")
-                
-            if 'nro_voucher' not in columns:
-                 print("Adding missing column: nro_voucher")
-                 conn.execute(text("ALTER TABLE ventas ADD COLUMN nro_voucher VARCHAR(100)"))
-            else:
-                print("Column 'nro_voucher' already exists.")
+    updates = [
+        "ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS usuario_id INTEGER REFERENCES usuarios(id);",
+        "ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS tipo_prestamo VARCHAR(50);",
+        "ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS modulo_id INTEGER REFERENCES modulos(id);",
+        "ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS dias_retraso INTEGER DEFAULT 0;",
+        "ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS monto_multa NUMERIC(10, 2) DEFAULT 0.00;",
+        "ALTER TABLE prestamos ADD COLUMN IF NOT EXISTS multa_pagada BOOLEAN DEFAULT FALSE;"
+    ]
 
-    print("Schema update check complete.")
+    with engine.connect() as conn:
+        for stmt in updates:
+            try:
+                conn.execute(text(stmt))
+                print(f"SUCCESS: {stmt}")
+            except Exception as e:
+                print(f"WARNING: Could not execute '{stmt}'. Error: {e}")
+        conn.commit()
+    print("Schema update finished.")
 
 if __name__ == "__main__":
-    try:
-        fix_schema()
-    except Exception as e:
-        print(f"Error updating schema: {e}")
+    fix_schema()
