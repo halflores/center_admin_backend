@@ -10,7 +10,8 @@ from app.schemas.financial import (
     GastoCreate, GastoUpdate, GastoOut,
     CajaSesionCreate, CajaSesionClose, CajaSesionOut, CajaMovimientoOut,
     PlanPagoCreate, PlanPagoOut, PagoCuotaCreate,
-    PagoNominaCreate, PagoNominaOut, PagoNominaUpdate
+    PagoNominaCreate, PagoNominaOut, PagoNominaUpdate,
+    IngresoVarioCreate
 )
 from app.services.financial_service import FinancialService
 
@@ -79,6 +80,15 @@ def get_gastos(
     current_user: Usuario = Depends(get_current_active_user)
 ):
     return FinancialService.get_gastos(db, skip=skip, limit=limit, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+
+# --- Ingresos Varios ---
+@router.post("/ingresos-varios", response_model=CajaMovimientoOut)
+def register_ingreso_vario(
+    ingreso: IngresoVarioCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_active_user)
+):
+    return FinancialService.register_ingreso_vario(db, ingreso, current_user.id)
 
 # --- Caja ---
 @router.get("/caja/sesion", response_model=Optional[CajaSesionOut])

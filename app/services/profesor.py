@@ -18,7 +18,7 @@ def get_profesores(db: Session, skip: int = 0, limit: int = 100, activo: bool = 
     return query.offset(skip).limit(limit).all()
 
 def create_profesor(db: Session, profesor: ProfesorCreate):
-    profesor_data = profesor.model_dump(exclude={'campus_ids'})
+    profesor_data = profesor.model_dump(exclude={'campus_ids', 'crear_usuario', 'rol_usuario_id', 'contrasena'})
     db_profesor = Profesor(**profesor_data)
     db.add(db_profesor)
     db.commit()

@@ -1,0 +1,467 @@
+{
+  "words": [
+    {
+      "word": "finding",
+      "start": 210,
+      "end": 1010,
+      "confidence": 0.95
+    },
+    {
+      "word": "nemo",
+      "start": 1020,
+      "end": 1720,
+      "confidence": 0.95
+    },
+    {
+      "word": "hello",
+      "start": 5420,
+      "end": 6090,
+      "confidence": 0.95
+    },
+    {
+      "word": "my",
+      "start": 6840,
+      "end": 7270,
+      "confidence": 0.95
+    },
+    {
+      "word": "name",
+      "start": 7290,
+      "end": 7780,
+      "confidence": 0.95
+    },
+    {
+      "word": "is",
+      "start": 8109,
+      "end": 8450,
+      "confidence": 0.95
+    },
+    {
+      "word": "nemo",
+      "start": 8670,
+      "end": 9430,
+      "confidence": 0.95
+    },
+    {
+      "word": "this",
+      "start": 12550,
+      "end": 13290,
+      "confidence": 0.95
+    },
+    {
+      "word": "is",
+      "start": 13500,
+      "end": 13720,
+      "confidence": 0.95
+    },
+    {
+      "word": "my",
+      "start": 13719,
+      "end": 13949,
+      "confidence": 0.95
+    },
+    {
+      "word": "dad",
+      "start": 13950,
+      "end": 14600,
+      "confidence": 0.95
+    },
+    {
+      "word": "marlin",
+      "start": 15030,
+      "end": 15750,
+      "confidence": 0.95
+    },
+    {
+      "word": "we",
+      "start": 18049,
+      "end": 18439,
+      "confidence": 0.95
+    },
+    {
+      "word": "live",
+      "start": 18440,
+      "end": 18880,
+      "confidence": 0.95
+    },
+    {
+      "word": "in",
+      "start": 19139,
+      "end": 19329,
+      "confidence": 0.95
+    },
+    {
+      "word": "the",
+      "start": 19330,
+      "end": 19580,
+      "confidence": 0.95
+    },
+    {
+      "word": "ocean",
+      "start": 19630,
+      "end": 20279,
+      "confidence": 0.95
+    },
+    {
+      "word": "hurrah",
+      "start": 23520,
+      "end": 24000,
+      "confidence": 0.95
+    },
+    {
+      "word": "hurrah",
+      "start": 25310,
+      "end": 25840,
+      "confidence": 0.95
+    },
+    {
+      "word": "it's",
+      "start": 27750,
+      "end": 28049,
+      "confidence": 0.95
+    },
+    {
+      "word": "my",
+      "start": 28049,
+      "end": 28360,
+      "confidence": 0.95
+    },
+    {
+      "word": "first",
+      "start": 28369,
+      "end": 28970,
+      "confidence": 0.95
+    },
+    {
+      "word": "day",
+      "start": 28990,
+      "end": 29460,
+      "confidence": 0.95
+    },
+    {
+      "word": "in",
+      "start": 29469,
+      "end": 29739,
+      "confidence": 0.95
+    },
+    {
+      "word": "school",
+      "start": 29740,
+      "end": 30250,
+      "confidence": 0.95
+    },
+    {
+      "word": "today",
+      "start": 30250,
+      "end": 30869,
+      "confidence": 0.95
+    },
+    {
+      "word": "where",
+      "start": 34030,
+      "end": 34599,
+      "confidence": 0.95
+    },
+    {
+      "word": "is",
+      "start": 35029,
+      "end": 35199,
+      "confidence": 0.95
+    },
+    {
+      "word": "my",
+      "start": 35269,
+      "end": 35760,
+      "confidence": 0.95
+    },
+    {
+      "word": "school",
+      "start": 35769,
+      "end": 36620,
+      "confidence": 0.95
+    },
+    {
+      "word": "dad",
+      "start": 36750,
+      "end": 37390,
+      "confidence": 0.95
+    },
+    {
+      "word": "it",
+      "start": 39589,
+      "end": 39870,
+      "confidence": 0.95
+    },
+    {
+      "word": "is",
+      "start": 39890,
+      "end": 40349,
+      "confidence": 0.95
+    },
+    {
+      "word": "there",
+      "start": 40419,
+      "end": 41230,
+      "confidence": 0.95
+    },
+    {
+      "word": "son",
+      "start": 41269,
+      "end": 41849,
+      "confidence": 0.95
+    },
+    {
+      "word": "hello",
+      "start": 45179,
+      "end": 46039,
+      "confidence": 0.95
+    },
+    {
+      "word": "are",
+      "start": 47730,
+      "end": 48060,
+      "confidence": 0.95
+    },
+    {
+      "word": "you",
+      "start": 48059,
+      "end": 48609,
+      "confidence": 0.95
+    },
+    {
+      "word": "the",
+      "start": 48639,
+      "end": 48919,
+      "confidence": 0.95
+    },
+    {
+      "word": "teachers",
+      "start": 48960,
+      "end": 49850,
+      "confidence": 0.95
+    },
+    {
+      "word": "no",
+      "start": 52199,
+      "end": 52979,
+      "confidence": 0.95
+    },
+    {
+      "word": "we're",
+      "start": 53769,
+      "end": 54220,
+      "confidence": 0.95
+    },
+    {
+      "word": "moms",
+      "start": 54230,
+      "end": 55060,
+      "confidence": 0.95
+    },
+    {
+      "word": "and",
+      "start": 55320,
+      "end": 55900,
+      "confidence": 0.95
+    },
+    {
+      "word": "dads",
+      "start": 56120,
+      "end": 57040,
+      "confidence": 0.95
+    },
+    {
+      "word": "hello",
+      "start": 60260,
+      "end": 61100,
+      "confidence": 0.95
+    },
+    {
+      "word": "i'm",
+      "start": 62340,
+      "end": 62880,
+      "confidence": 0.95
+    },
+    {
+      "word": "nemo",
+      "start": 63110,
+      "end": 63940,
+      "confidence": 0.95
+    },
+    {
+      "word": "are",
+      "start": 65710,
+      "end": 66030,
+      "confidence": 0.95
+    },
+    {
+      "word": "you",
+      "start": 66030,
+      "end": 66650,
+      "confidence": 0.95
+    },
+    {
+      "word": "my",
+      "start": 66750,
+      "end": 67180,
+      "confidence": 0.95
+    },
+    {
+      "word": "new",
+      "start": 67190,
+      "end": 67730,
+      "confidence": 0.95
+    },
+    {
+      "word": "friends",
+      "start": 67820,
+      "end": 68740,
+      "confidence": 0.95
+    },
+    {
+      "word": "yes",
+      "start": 71000,
+      "end": 71810,
+      "confidence": 0.95
+    },
+    {
+      "word": "we",
+      "start": 72410,
+      "end": 73039,
+      "confidence": 0.95
+    },
+    {
+      "word": "are",
+      "start": 73480,
+      "end": 74120,
+      "confidence": 0.95
+    },
+    {
+      "word": "i'm",
+      "start": 77280,
+      "end": 77910,
+      "confidence": 0.95
+    },
+    {
+      "word": "mr",
+      "start": 78170,
+      "end": 79060,
+      "confidence": 0.95
+    },
+    {
+      "word": "ray",
+      "start": 79150,
+      "end": 79800,
+      "confidence": 0.95
+    },
+    {
+      "word": "i'm",
+      "start": 81349,
+      "end": 82009,
+      "confidence": 0.95
+    },
+    {
+      "word": "the",
+      "start": 82250,
+      "end": 82680,
+      "confidence": 0.95
+    },
+    {
+      "word": "teacher",
+      "start": 82770,
+      "end": 83509,
+      "confidence": 0.95
+    },
+    {
+      "word": "where's",
+      "start": 85750,
+      "end": 86550,
+      "confidence": 0.95
+    },
+    {
+      "word": "my",
+      "start": 86630,
+      "end": 87250,
+      "confidence": 0.95
+    },
+    {
+      "word": "new",
+      "start": 87259,
+      "end": 87869,
+      "confidence": 0.95
+    },
+    {
+      "word": "class",
+      "start": 87950,
+      "end": 88930,
+      "confidence": 0.95
+    },
+    {
+      "word": "here",
+      "start": 91400,
+      "end": 92090,
+      "confidence": 0.95
+    },
+    {
+      "word": "we",
+      "start": 92300,
+      "end": 92930,
+      "confidence": 0.95
+    },
+    {
+      "word": "are",
+      "start": 93170,
+      "end": 93940,
+      "confidence": 0.95
+    },
+    {
+      "word": "bye",
+      "start": 97250,
+      "end": 97860,
+      "confidence": 0.95
+    },
+    {
+      "word": "dad",
+      "start": 98010,
+      "end": 98680,
+      "confidence": 0.95
+    },
+    {
+      "word": "bye",
+      "start": 100650,
+      "end": 101300,
+      "confidence": 0.95
+    },
+    {
+      "word": "nemo",
+      "start": 101509,
+      "end": 102389,
+      "confidence": 0.95
+    },
+    {
+      "word": "have",
+      "start": 104500,
+      "end": 104940,
+      "confidence": 0.95
+    },
+    {
+      "word": "fun",
+      "start": 104950,
+      "end": 105580,
+      "confidence": 0.95
+    },
+    {
+      "word": "in",
+      "start": 105770,
+      "end": 106100,
+      "confidence": 0.95
+    },
+    {
+      "word": "school",
+      "start": 106169,
+      "end": 106960,
+      "confidence": 0.95
+    }
+  ],
+  "duration_ms": 106960
+}

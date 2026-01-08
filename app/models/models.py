@@ -101,9 +101,9 @@ class Estudiante(Base):
 
     campus = relationship("Campus", back_populates="estudiantes")
     usuario = relationship("Usuario")
-    gestiones = relationship("EstudianteGestion", back_populates="estudiante")
-    responsables = relationship("Responsable", back_populates="estudiante")
-    descuentos = relationship("DescuentoEstudiante", back_populates="estudiante")
+    gestiones = relationship("EstudianteGestion", back_populates="estudiante", cascade="all, delete-orphan")
+    responsables = relationship("Responsable", back_populates="estudiante", cascade="all, delete-orphan")
+    descuentos = relationship("DescuentoEstudiante", back_populates="estudiante", cascade="all, delete-orphan")
     ventas = relationship("Venta", back_populates="estudiante")
     niveles_academicos = relationship("NivelAcademicoEstudiante", back_populates="estudiante", cascade="all, delete-orphan")
 
@@ -853,7 +853,7 @@ class PlanPago(Base):
     id = Column(Integer, primary_key=True, index=True)
     inscripcion_id = Column(Integer, ForeignKey("inscripciones.id"), nullable=True)
     inscripcion_paquete_id = Column(Integer, ForeignKey("inscripcion_paquete.id"), nullable=True)
-    estudiante_id = Column(Integer, ForeignKey("estudiantes.id"), nullable=False)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id", ondelete="CASCADE"), nullable=False)
     monto_total = Column(Numeric(10, 2), nullable=False)
     monto_pagado = Column(Numeric(10, 2), default=0.00)
     saldo_pendiente = Column(Numeric(10, 2), nullable=False)
@@ -1011,7 +1011,7 @@ class CajaArqueo(Base):
     __tablename__ = "caja_arqueos"
     
     id = Column(Integer, primary_key=True, index=True)
-    sesion_id = Column(Integer, ForeignKey("caja_sesiones.id"), nullable=False, unique=True)
+    caja_sesion_id = Column(Integer, ForeignKey("caja_sesiones.id"), nullable=False, unique=True)
     billetes_200 = Column(Integer, default=0)
     billetes_100 = Column(Integer, default=0)
     billetes_50 = Column(Integer, default=0)
@@ -1021,7 +1021,211 @@ class CajaArqueo(Base):
     monedas_2 = Column(Integer, default=0)
     monedas_1 = Column(Integer, default=0)
     monedas_050 = Column(Integer, default=0)
-    total_contado = Column(Numeric(10, 2), nullable=False)
+    monedas_020 = Column(Integer, default=0)
+    monedas_010 = Column(Integer, default=0)
+    monto_total = Column(Numeric(10, 2), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     sesion = relationship("CajaSesion", back_populates="arqueo")
+
+
+# =====================================================
+# AUDIO LESSONS - Sincronización Audio-Texto
+# =====================================================
+
+class AudioLesson(Base):
+    """
+    Lección de audio con sincronización de texto para estudiantes.
+    Almacena el audio, la transcripción y los timestamps por palabra
+    para permitir resaltado sincronizado durante la reproducción.
+    """
+    __tablename__ = "audio_lessons"
+
+    id = Column(Integer, primary_key=True, index=True)
+    titulo = Column(String(255), nullable=False)
+    descripcion = Column(Text, nullable=True)
+    
+    # Relaciones académicas
+    modulo_id = Column(Integer, ForeignKey("modulos.id"), nullable=True, index=True)
+    curso_id = Column(Integer, ForeignKey("cursos.id"), nullable=True, index=True)
+    
+    # Archivo de audio
+    audio_url = Column(String(500), nullable=True)  # Path relativo al archivo
+    audio_duration_ms = Column(Integer, nullable=True)  # Duración en milisegundos
+    
+    # Contenido de texto
+    transcript_text = Column(Text, nullable=False)  # Texto completo de la lección
+    
+    # Timestamps generados por Gentle
+    # Formato: {"words": [{"word": "Hello", "start": 0, "end": 450}, ...], "duration_ms": 5000}
+    timestamps_json = Column(Text, nullable=True)  # JSON almacenado como texto
+    
+    # Estado del procesamiento
+    estado = Column(String(20), default='PENDIENTE')  # PENDIENTE, PROCESANDO, LISTO, ERROR
+    
+    # Metadatos
+    orden = Column(Integer, default=0)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relaciones
+    modulo = relationship("Modulo")
+    curso = relationship("Curso")
+    progress = relationship("StudentAudioProgress", back_populates="lesson", cascade="all, delete-orphan")
+    
+    @property
+    def timestamps(self):
+        """Parse timestamps_json a diccionario"""
+        import json
+        if self.timestamps_json:
+            try:
+                return json.loads(self.timestamps_json)
+            except:
+                return None
+        return None
+    
+    @timestamps.setter
+    def timestamps(self, value):
+        """Serializa diccionario a JSON string"""
+        import json
+        if value:
+            self.timestamps_json = json.dumps(value)
+        else:
+            self.timestamps_json = None
+
+
+class StudentAudioProgress(Base):
+    """
+    Tracking del progreso de un estudiante en una lección de audio.
+    Permite continuar desde donde se quedó y registrar estadísticas de uso.
+    """
+    __tablename__ = "student_audio_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id", ondelete="CASCADE"), nullable=False, index=True)
+    audio_lesson_id = Column(Integer, ForeignKey("audio_lessons.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Progreso
+    last_position_ms = Column(Integer, default=0)  # Última posición reproducida
+    times_completed = Column(Integer, default=0)  # Veces que completó la lección
+    total_time_listened_ms = Column(Integer, default=0)  # Tiempo total escuchado
+    completed = Column(Boolean, default=False)  # Si completó al menos una vez
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint('estudiante_id', 'audio_lesson_id', name='unique_student_audio_progress'),
+    )
+    
+    # Relaciones
+    estudiante = relationship("Estudiante")
+    lesson = relationship("AudioLesson", back_populates="progress")
+
+
+# =====================================================
+# DIALOGUES - Práctica de Conversación
+# =====================================================
+
+class Dialogue(Base):
+    """
+    Diálogo predefinido para práctica de conversación.
+    El estudiante practica un rol mientras el tutor (TTS) lee el otro.
+    """
+    __tablename__ = "dialogues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    difficulty_level = Column(String(50), default='beginner')  # beginner, intermediate, advanced
+    
+    # Roles del diálogo
+    student_role = Column(String(100), nullable=True)  # Legacy
+    tutor_role = Column(String(100), nullable=True)    # Legacy
+    
+    # Configuración de voz TTS
+    voice_gender = Column(String(10), default='female')  # male, female
+    voice_accent = Column(String(20), default='en-US')   # en-US, en-GB
+    
+    modulo_id = Column(Integer, ForeignKey("modulos.id"), nullable=True)
+    modulo = relationship("Modulo")
+    
+    # Metadatos
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relaciones
+    lines = relationship("DialogueLine", back_populates="dialogue", cascade="all, delete-orphan", order_by="DialogueLine.order_index")
+    attempts = relationship("StudentDialogueAttempt", back_populates="dialogue")
+    roles = relationship("DialogueRole", back_populates="dialogue", cascade="all, delete-orphan")
+
+
+class DialogueRole(Base):
+    __tablename__ = "dialogue_roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dialogue_id = Column(Integer, ForeignKey("dialogues.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    voice_gender = Column(String(10), default='female')
+    voice_accent = Column(String(20), default='en-US')
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    dialogue = relationship("Dialogue", back_populates="roles")
+
+
+class DialogueLine(Base):
+    """
+    Línea individual de un diálogo.
+    Cada línea pertenece a un rol (tutor o estudiante).
+    """
+    __tablename__ = "dialogue_lines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dialogue_id = Column(Integer, ForeignKey("dialogues.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(100), nullable=False)  # "Alex" o "Maria"
+    text = Column(Text, nullable=False)
+    order_index = Column(Integer, nullable=False)
+    audio_url = Column(String(500), nullable=True)  # Audio TTS pre-generado para tutor
+    alignment_json = Column(Text, nullable=True)    # JSON con timestamps de palabras (Edge TTS)
+    
+    # Relaciones
+    dialogue = relationship("Dialogue", back_populates="lines")
+    attempts = relationship("StudentDialogueAttempt", back_populates="line")
+
+
+class StudentDialogueAttempt(Base):
+    """
+    Registro de cada intento de un estudiante al practicar una línea del diálogo.
+    Almacena el audio grabado, la transcripción y la evaluación.
+    """
+    __tablename__ = "student_dialogue_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    estudiante_id = Column(Integer, ForeignKey("estudiantes.id", ondelete="CASCADE"), nullable=False, index=True)
+    dialogue_id = Column(Integer, ForeignKey("dialogues.id", ondelete="CASCADE"), nullable=False, index=True)
+    line_id = Column(Integer, ForeignKey("dialogue_lines.id", ondelete="CASCADE"), nullable=False)
+    
+    # Audio grabado del estudiante
+    audio_path = Column(String(500), nullable=True)
+    
+    # Transcripción (lo que dijo el estudiante)
+    transcription = Column(Text, nullable=True)
+    
+    # Resultado de alineación con Gentle (JSON)
+    alignment_result = Column(Text, nullable=True)  # JSON string
+    
+    # Evaluación
+    score = Column(Numeric(5, 2), nullable=True)  # 0-100
+    feedback = Column(Text, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relaciones
+    estudiante = relationship("Estudiante")
+    dialogue = relationship("Dialogue", back_populates="attempts")
+    line = relationship("DialogueLine", back_populates="attempts")

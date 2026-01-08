@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER:-admin}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-07.Hector}
+      - POSTGRES_DB=${DB_NAME:-institute_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - institute_network
+
+  # Servicio Gentle Forced Aligner
+  gentle:
+    image: lowerquality/gentle:latest
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    volumes:
+      - gentle_cache:/gentle/exp
+    networks:
+      - institute_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8765/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Backend FastAPI
+  backend:
+    build: .
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-admin}
+      - DB_PASSWORD=${DB_PASSWORD:-07.Hector}
+      - DB_NAME=${DB_NAME:-institute_db}
+      - SECRET_KEY=${SECRET_KEY}
+      - GENTLE_URL=http://gentle:8765
+      - AUDIO_STORAGE_PATH=/app/uploads/audio
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs.txt:/app/logs.txt
+    depends_on:
+      - db
+      - gentle
+    networks:
+      - institute_network
+
+volumes:
+  postgres_data:
+  gentle_cache:
+
+
+networks:
+  institute_network:
+    driver: bridge

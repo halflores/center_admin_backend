@@ -109,6 +109,13 @@ class CajaSesionOut(CajaSesionBase):
     class Config:
         from_attributes = True
 
+class IngresoVarioCreate(BaseModel):
+    monto: Decimal
+    categoria: str
+    descripcion: Optional[str] = None
+    metodo_pago: str = "EFECTIVO"
+    numero_voucher: Optional[str] = None
+
 class CajaMovimientoOut(BaseModel):
     id: int
     sesion_id: Optional[int]

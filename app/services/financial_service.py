@@ -139,6 +139,27 @@ class FinancialService:
         db.commit()
         return True
 
+    # --- Ingresos Varios ---
+    @staticmethod
+    def register_ingreso_vario(db: Session, ingreso: "IngresoVarioCreate", usuario_id: int):
+        from app.schemas.financial import IngresoVarioCreate # Import here to avoid circular dependencies if any
+        
+        # Verify Session is Open? strictly speaking not required but good practice.
+        # But for 'other reasons' maybe it's fine even if session logic is loose.
+        # However, for Cash Box consistency, it should be linked to a session.
+        # register_movement handles finding the active session.
+        
+        return FinancialService.register_movement(
+            db,
+            tipo="INGRESO",
+            categoria=ingreso.categoria,
+            monto=ingreso.monto,
+            descripcion=ingreso.descripcion or f"Ingreso Vario: {ingreso.categoria}",
+            usuario_id=usuario_id,
+            metodo_pago=ingreso.metodo_pago,
+            numero_voucher=ingreso.numero_voucher
+        )
+
     # --- Caja (Cash Flow) ---
     @staticmethod
     def get_active_session(db: Session, usuario_id: int):

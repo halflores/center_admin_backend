@@ -18,7 +18,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+import os
+
 app.include_router(api_router, prefix="/api/v1")
+
+# Mount uploads directory ensuring it exists
+# Use absolute path to avoid CWD issues
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
+
+if not os.path.exists(UPLOADS_DIR):
+    os.makedirs(UPLOADS_DIR)
+    
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 @app.get("/")
 def root():

@@ -2,10 +2,20 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import roles, users, login, funciones, acciones, permisos, rol_permisos, campus, estudiantes, gestion, parentesco, responsables, categorias_producto, productos, listas_precios, precios_producto, descuentos_estudiante, ventas, devoluciones, movimientos, carrito, ingresos, proveedores
 from app.api.v1.endpoints import programas, niveles, modulos, profesores, cursos, horarios, inscripciones, pagos_profesores, niveles_formacion, aulas, tipos_transaccion, niveles_academicos_estudiante
 from app.api.v1.endpoints import tipos_producto, paquetes, inscripciones_paquete, financial, cargos, empleados, library
+from app.api.v1.endpoints import audio_lessons, dialogues
 from app.routers import modulo_libros
 
 api_router = APIRouter()
 api_router.include_router(login.router, tags=["login"])
+# ... (existing routers)
+api_router.include_router(library.router, prefix="/biblioteca", tags=["Biblioteca"])
+api_router.include_router(modulo_libros.router, tags=["modulo-libros"])
+
+# Audio Lessons Module - Sincronización Audio-Texto
+api_router.include_router(audio_lessons.router, prefix="/audio-lessons", tags=["Audio Lessons"])
+
+# Conversation Practice Module
+api_router.include_router(dialogues.router, prefix="/dialogues", tags=["Dialogues"])
 api_router.include_router(roles.router, prefix="/roles", tags=["roles"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(funciones.router, prefix="/funciones", tags=["funciones"])
@@ -58,4 +68,7 @@ api_router.include_router(financial.router, prefix="/finanzas", tags=["financial
 # Library Module Endpoints
 api_router.include_router(library.router, prefix="/biblioteca", tags=["Biblioteca"])
 api_router.include_router(modulo_libros.router, tags=["modulo-libros"])
+
+# Audio Lessons Module - Sincronización Audio-Texto
+api_router.include_router(audio_lessons.router, prefix="/audio-lessons", tags=["Audio Lessons"])
 

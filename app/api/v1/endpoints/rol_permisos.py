@@ -46,14 +46,19 @@ def read_permisos_by_rol(
     rol_permisos = rol_permiso_service.get_permisos_by_rol(db, rol_id=rol_id)
     return rol_permisos
 
-@router.delete("/{rol_id}/{permiso_id}", response_model=RolPermisoResponse)
+@router.delete("/{rol_id}/{permiso_id}")
 def delete_rol_permiso(
     rol_id: int, 
     permiso_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(deps.get_current_user)
 ):
-    db_rol_permiso = rol_permiso_service.delete_rol_permiso(db, rol_id=rol_id, permiso_id=permiso_id)
-    if db_rol_permiso is None:
+    # Get it first to check existence
+    db_rol_permiso = rol_permiso_service.get_rol_permiso(db, rol_id=rol_id, permiso_id=permiso_id)
+    if not db_rol_permiso:
         raise HTTPException(status_code=404, detail="Role Permission assignment not found")
-    return db_rol_permiso
+    
+    # Perform deletion
+    rol_permiso_service.delete_rol_permiso(db, rol_id=rol_id, permiso_id=permiso_id)
+    
+    return {"message": "Permission successfully removed from role", "rol_id": rol_id, "permiso_id": permiso_id}

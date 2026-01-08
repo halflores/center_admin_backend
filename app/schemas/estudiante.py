@@ -12,8 +12,12 @@ class EstudianteBase(BaseModel):
     sexo: Optional[str] = None
     fecha_nacimiento: Optional[date] = None
 
+
 class EstudianteCreate(EstudianteBase):
-    pass
+    crear_usuario: Optional[bool] = False
+    rol_usuario_id: Optional[int] = None
+    contrasena: Optional[str] = None
+
 
 class EstudianteUpdate(EstudianteBase):
     nombres: Optional[str] = None

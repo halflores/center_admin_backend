@@ -22,7 +22,10 @@ class ProfesorBase(BaseModel):
 
 class ProfesorCreate(ProfesorBase):
     usuario_id: Optional[int] = None
-    campus_ids: Optional[List[int]] = None  # List of campus IDs to associate
+    campus_ids: Optional[List[int]] = None
+    crear_usuario: Optional[bool] = False
+    rol_usuario_id: Optional[int] = None
+    contrasena: Optional[str] = None
 
 class ProfesorUpdate(BaseModel):
     ci: Optional[str] = None

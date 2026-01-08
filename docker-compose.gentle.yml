@@ -1,0 +1,63 @@
+# Docker Compose para Gentle (Forced Aligner)
+# ============================================
+#
+# Gentle es un alineador forzado que toma audio + texto
+# y produce timestamps precisos por palabra (~10-20ms).
+#
+# Uso:
+#   docker-compose -f docker-compose.gentle.yml up -d
+#
+# El servicio estará disponible en: http://localhost:8765
+#
+# Para verificar:
+#   curl http://localhost:8765/
+
+version: '3.8'
+
+services:
+  gentle:
+    image: lowerquality/gentle:latest
+    container_name: gentle_aligner
+    ports:
+      - "8765:8765"
+    restart: unless-stopped
+    # Recursos (ajustar según capacidad del servidor)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    # Volumen para cache de modelos (mejora performance)
+    volumes:
+      - gentle_cache:/gentle/exp
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  gentle_cache:
+    driver: local
+
+# Notas:
+# ------
+# 1. Gentle requiere ~2-4GB de RAM para funcionar correctamente
+# 2. La primera vez que procesa un audio puede tardar más (descarga modelos)
+# 3. Para producción, considerar usar un servidor dedicado
+# 4. El contenedor expone el puerto 8765 para la API HTTP
+#
+# Ejemplo de uso con curl:
+# curl -X POST \
+#   "http://localhost:8765/transcriptions?async=false" \
+#   -F "audio=@audio.mp3" \
+#   -F "transcript=Hello my name is John"
